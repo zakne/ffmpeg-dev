@@ -913,26 +913,6 @@ cglobal vp9_ipred_dl_32x32_16, 2, 6, 7, dst, stride, l, a
     vpalignr                m4, m2, m1, 4
     mova   [dstq+strideq*2+0 ], m3
     mova   [dstq+strideq*2+32], m4
-    vpalignr                m3, m1, m0, 6
-    vpalignr                m4, m2, m1, 6
-    mova   [dstq+strideq*3+0 ], m3
-    mova   [dstq+strideq*3+32], m4
-    vpalignr                m3, m1, m0, 8
-    vpalignr                m4, m2, m1, 8
-    mova   [dstq+strideq*4+0 ], m3
-    mova   [dstq+strideq*4+32], m4
-    vpalignr                m3, m1, m0, 10
-    vpalignr                m4, m2, m1, 10
-    mova   [dstq+strideq*5+0 ], m3
-    mova   [dstq+strideq*5+32], m4
-    vpalignr                m3, m1, m0, 12
-    vpalignr                m4, m2, m1, 12
-    mova   [dstq+strideq*6+0 ], m3
-    mova   [dstq+strideq*6+32], m4
-    vpalignr                m3, m1, m0, 14
-    vpalignr                m4, m2, m1, 14
-    mova   [dstq+strideq*7+0 ], m3
-    mova   [dstq+strideq*7+32], m4
     mova                    m0, m2
     vperm2i128              m2, m2, m2, q0101          ; 5555555555555555
     dec                   cntd
