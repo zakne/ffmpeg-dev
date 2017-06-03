@@ -889,7 +889,7 @@ cglobal vp9_ipred_dl_32x32_16, 2, 6, 7, dst, stride, l, a
     movifnidn               aq, amp
     mova                    m0, [aq+mmsize*0]       ; abcdefghijklmnop
     mova                    m1, [aq+mmsize*1]       ; qrstuvwxyz012345
-    vpbroadcastw           xm4, [aq+mmsize*1+31]    ; 55555555
+    vpbroadcastw           xm4, [aq+mmsize*1+30]    ; 55555555
     vpalignr                m2, m1, m0, 2           ; bcdefghijklmnopq
     vpalignr                m3, m1, m0, 4           ; cdefghijklmnopqr
     vperm2i128              m5, m1, m4, q0201       ; yz01234555555555
