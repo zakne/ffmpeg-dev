@@ -900,9 +900,7 @@ cglobal vp9_ipred_dl_32x32_16, 2, 6, 7, dst, stride, l, a
     LOWPASS                  1,  2,  3                 ; RSTUVWXYZ......5
     vperm2i128              m2, m1, m4, q0201          ; Z......555555555
     DEFINE_ARGS dst, stride, stride3, cnt
-    mov                   cntd, 4
-    lea               stride3q, [strideq*3]
-.loop:
+
     mova   [dstq+strideq*0+0 ], m0
     mova   [dstq+strideq*0+32], m1
     vpalignr                m3, m1, m0, 2
@@ -915,8 +913,6 @@ cglobal vp9_ipred_dl_32x32_16, 2, 6, 7, dst, stride, l, a
     mova   [dstq+strideq*2+32], m4
     mova                    m0, m2
     vperm2i128              m2, m2, m2, q0101          ; 5555555555555555
-    dec                   cntd
-    jg .loop
     RET
 %endif
 
