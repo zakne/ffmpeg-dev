@@ -884,6 +884,28 @@ cglobal vp9_ipred_dl_16x16_16, 2, 4, 5, dst, stride, l, a
     dec                   cntd
     jg .loop
     RET
+    
+cglobal vp9_ipred_dl_32x32_16, 2, 6, 7, dst, stride, l, a
+    movifnidn               aq, amp
+    mova                    m0, [aq+mmsize*0]       ; abcdefghijklmnop
+    mova                    m1, [aq+mmsize*1]       ; qrstuvwxyz012345
+    vpbroadcastw           xm4, [aq+mmsize*1+30]    ; 55555555
+    vpalignr                m2, m1, m0, 2           ; bcdefghijklmnopq
+    vpalignr                m3, m1, m0, 4           ; cdefghijklmnopqr
+    vperm2i128              m5, m1, m4, q0201       ; yz01234555555555
+    LOWPASS                  0,  2,  3              ; BCDEFGHIJKLMNOPQ
+    vpalignr                m2, m5, m1, 2           ; rstuvwxyz0123455
+    vpalignr                m3, m5, m1, 4           ; stuvwxyz01234555
+    LOWPASS                  1,  2,  3              ; RSTUVWXYZ......5
+    vperm2i128              m2, m1, m4, q0201       ; Z......555555555
+    
+    mova   [dstq+strideq*0+0 ], m0
+    mova   [dstq+strideq*0+32], m1
+    vpalignr                m3, m1, m0, 2
+    vpalignr                m4, m2, m1, 2
+    mova   [dstq+strideq*1+0 ], m3
+    mova   [dstq+strideq*1+32], m4
+    RET
 %endif
 
 %macro DR_FUNCS 1 ; stack_mem_for_32x32_32bit_function
