@@ -890,10 +890,11 @@ cglobal vp9_ipred_dl_32x32_16, 2, 6, 7, dst, stride, l, a
     mova                    m0, [aq+mmsize*0]       ; abcdefghijklmnop
     mova                    m1, [aq+mmsize*1]       ; qrstuvwxyz012345
     vpbroadcastw           xm4, [aq+mmsize*1+30]    ; 55555555
-    vpalignr                m2, m1, m0, 2           ; bcdefghijklmnopq
-    vpalignr                m3, m1, m0, 4           ; cdefghijklmnopqr
+    vperm2i128              m5, m0, m1, q0201       ; ijklmnopqrstuvwx
+    vpalignr                m2, m5, m0, 2           ; bcdefghijklmnopq
+    vpalignr                m3, m5, m0, 4           ; cdefghijklmnopqr
+    LOWPASS                  0,  2,  3              ; BCDEFG(H)(I)JKLMNO(P)(Q)
     vperm2i128              m5, m1, m4, q0201       ; yz01234555555555
-    LOWPASS                  0,  2,  3              ; BCDEFGHIJKLMNOPQ
     vpalignr                m2, m5, m1, 2           ; rstuvwxyz0123455
     vpalignr                m3, m5, m1, 4           ; stuvwxyz01234555
     LOWPASS                  1,  2,  3              ; RSTUVWXYZ......5
