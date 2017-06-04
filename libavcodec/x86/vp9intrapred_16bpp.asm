@@ -894,11 +894,11 @@ cglobal vp9_ipred_dl_32x32_16, 2, 6, 7, dst, stride, l, a
     vperm2i128              m5, m0, m1, q0201          ; ijklmnopqrstuvwx
     vpalignr                m2, m5, m0, 2              ; bcdefghijklmnopq
     vpalignr                m3, m5, m0, 4              ; cdefghijklmnopqr
-    LOWPASS                  0,  2,  3                 ; BCDE FGHI JKLM NOPQ
+    LOWPASS                  0,  2,  3                 ; BCDEFGHIJKLMNOPQ
     vperm2i128              m5, m1, m4, q0201          ; yz01234555555555
     vpalignr                m2, m5, m1, 2              ; rstuvwxyz0123455
     vpalignr                m3, m5, m1, 4              ; stuvwxyz01234555
-    LOWPASS                  1,  2,  3                 ; RSTU VWXY Z......5
+    LOWPASS                  1,  2,  3                 ; RSTUVWXYZ......5
     vperm2i128              m2, m1, m4, q0201          ; Z......555555555
     vperm2i128              m5, m0, m1, q0201          ; JKLMNOPQRSTUVWXY
     DEFINE_ARGS dst, stride, stride3, stride5, cnt
@@ -906,45 +906,45 @@ cglobal vp9_ipred_dl_32x32_16, 2, 6, 7, dst, stride, l, a
     lea               stride5q, [strideq*5]
     mov                   cntd, 4
     
-.loop:    
-    mova   [dstq+strideq*0+0 ], m0                     ; BCDEFGHIJKLMNOPQ
-    mova   [dstq+strideq*0+32], m1                     ; RSTUVWXYZ......5
-    vpalignr                m3, m5, m0, 2
-    vpalignr                m4, m2, m1, 2
-    mova   [dstq+strideq*1+0 ], m3
-    mova   [dstq+strideq*1+32], m4
-    vpalignr                m3, m5, m0, 4
-    vpalignr                m4, m2, m1, 4
-    mova   [dstq+strideq*2+0 ], m3
-    mova   [dstq+strideq*2+32], m4
+.loop:
+    mova   [dstq+strideq*0 + 0], m0
+    mova   [dstq+strideq*0 +32], m1
+    vpalignr                 m3, m5, m0, 2
+    vpalignr                 m4, m2, m1, 2
+    mova   [dstq+strideq*1 + 0], m3
+    mova   [dstq+strideq*1 +32], m4
+    vpalignr                 m3, m5, m0, 4
+    vpalignr                 m4, m2, m1, 4
+    mova   [dstq+strideq*2 + 0], m3
+    mova   [dstq+strideq*2 +32], m4
     vpalignr                 m3, m5, m0, 6
     vpalignr                 m4, m2, m1, 6
-    mova   [dstq+stride3q*1+0 ], m3
+    mova   [dstq+stride3q*1+ 0], m3
     mova   [dstq+stride3q*1+32], m4
     vpalignr                 m3, m5, m0, 8
     vpalignr                 m4, m2, m1, 8
-    mova   [dstq+strideq*4+0 ], m3
-    mova   [dstq+strideq*4+32], m4
+    mova   [dstq+strideq*4 + 0], m3
+    mova   [dstq+strideq*4 +32], m4
     vpalignr                 m3, m5, m0, 10
     vpalignr                 m4, m2, m1, 10
-    mova   [dstq+stride5q*1+0 ], m3
+    mova   [dstq+stride5q*1+ 0], m3
     mova   [dstq+stride5q*1+32], m4
     vpalignr                 m3, m5, m0, 12
     vpalignr                 m4, m2, m1, 12
-    mova   [dstq+stride3q*2+0 ], m3
+    mova   [dstq+stride3q*2+ 0], m3
     mova   [dstq+stride3q*2+32], m4    
     vpalignr                 m3, m5, m0, 14
     vpalignr                 m4, m2, m1, 14
     mova   [dstq+stride3q*2+64], m3
     mova   [dstq+stride3q*2+96], m4
-    vpalignr                m3, m5, m0, 16
-    vpalignr                m4, m2, m1, 16
-    vperm2i128              m5, m3, m4, q0201
-    vperm2i128              m2, m4, m4, q0101
-    mova                    m0, m3
-    mova                    m1, m4
-    lea                   dstq, [dstq+strideq*8]
-    dec                   cntd
+    vpalignr                 m3, m5, m0, 16
+    vpalignr                 m4, m2, m1, 16
+    vperm2i128               m5, m3, m4, q0201
+    vperm2i128               m2, m4, m4, q0101
+    mova                     m0, m3
+    mova                     m1, m4
+    lea                    dstq, [dstq+strideq*8]
+    dec                    cntd
     jg .loop
     RET
 %endif
