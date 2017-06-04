@@ -936,12 +936,12 @@ cglobal vp9_ipred_dl_32x32_16, 2, 6, 7, dst, stride, l, a
     vpalignr                m4, m2, m1, 14 ; YZ......55555555
     mova   [dstq+stride3q*2+64], m3
     mova   [dstq+stride3q*2+96], m4
-    ;vpalignr                m3, m5, m0, 16 ; JKLMNOPQRSTUVWXY
-    ;vpalignr                m4, m2, m1, 16 ; Z......555555555
+    vpalignr                m3, m5, m0, 16 ; JKLMNOPQRSTUVWXY
+    vpalignr                m4, m2, m1, 16 ; Z......555555555
     ;mova   [dstq+strideq*8+0 ], m3
     ;mova   [dstq+strideq*8+32], m4
-    mova        m0, m5
-    mova        m1, m2
+    mova        m0, m3
+    mova        m1, m4
     lea                   dstq, [dstq+strideq*8]
     dec                   cntd
     jg .loop
