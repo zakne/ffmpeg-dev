@@ -929,7 +929,15 @@ cglobal vp9_ipred_dl_32x32_16, 2, 6, 7, dst, stride, l, a
     vpalignr                m3, m5, m0, 12
     vpalignr                m4, m2, m1, 12
     mova   [dstq+stride3q*2+0 ], m3
-    mova   [dstq+stride3q*2+32], m4
+    mova   [dstq+stride3q*2+32], m4    
+    vpalignr                m3, m5, m0, 14
+    vpalignr                m4, m2, m1, 14
+    mova   [dstq+stride3q*2+64], m3
+    mova   [dstq+stride3q*2+96], m4
+    vpalignr                m3, m5, m0, 16
+    vpalignr                m4, m2, m1, 16
+    mova   [dstq+strideq*8+0 ], m3
+    mova   [dstq+strideq*8+32], m4
     RET
 %endif
 
