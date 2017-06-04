@@ -899,11 +899,13 @@ cglobal vp9_ipred_dl_32x32_16, 2, 6, 7, dst, stride, l, a
     vpalignr                m3, m5, m1, 4              ; stuvwxyz01234555
     LOWPASS                  1,  2,  3                 ; RSTUVWXYZ......5
     vperm2i128              m2, m1, m4, q0201          ; Z......555555555
+    vperm2i128              m5, m0, m1, q0201          ; JKLMNOPQRSTUVWXY
+    
     DEFINE_ARGS dst, stride, stride3, cnt
 
     mova   [dstq+strideq*0+0 ], m0
     mova   [dstq+strideq*0+32], m1
-    vpalignr                m3, m1, m0, 2
+    vpalignr                m3, m5, m0, 2
     vpalignr                m4, m2, m1, 2
     mova   [dstq+strideq*1+0 ], m3
     mova   [dstq+strideq*1+32], m4
