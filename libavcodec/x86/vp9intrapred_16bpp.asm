@@ -943,6 +943,7 @@ cglobal vp9_ipred_dl_32x32_16, 2, 6, 7, dst, stride, l, a
     mova        m0, m5
     mova        m1, m2
     lea                   dstq, [dstq+strideq*8]
+    dec                   cntd
     jg .loop
     RET
 %endif
