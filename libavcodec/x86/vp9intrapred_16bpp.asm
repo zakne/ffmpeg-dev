@@ -935,15 +935,15 @@ cglobal vp9_ipred_dl_32x32_16, 2, 6, 7, dst, stride, l, a
     mova   [dstq+strideq*2+32], m4
     vpalignr                 m3, m5, m0, 14
     vpalignr                 m4, m2, m1, 14
-    mova   [dstq+stride3q+ 0], m3
-    mova   [dstq+stride3q+32], m4
+    mova   [dstq+stride3q+  0], m3
+    mova   [dstq+stride3q+ 32], m4
     vpalignr                 m3, m5, m0, 16
     vpalignr                 m4, m2, m1, 16
     vperm2i128               m5, m3, m4, q0201
     vperm2i128               m2, m4, m4, q0101
     mova                     m0, m3
     mova                     m1, m4
-    lea                    dstq, [dstq+strideq*8]
+    lea                    dstq, [dstq+strideq*4]
     dec                    cntd
     jg .loop
     RET
