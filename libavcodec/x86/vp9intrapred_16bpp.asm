@@ -916,32 +916,34 @@ cglobal vp9_ipred_dl_32x32_16, 2, 6, 7, dst, stride, l, a
     vpalignr                m4, m2, m1, 4  ; TUVWXYZ......555
     mova   [dstq+strideq*2+0 ], m3
     mova   [dstq+strideq*2+32], m4
-    vpalignr                m3, m5, m0, 6  ; EFGHIJKLMNOPQRST
-    vpalignr                m4, m2, m1, 6  ; UVWXYZ......5555
+    vpalignr                 m3, m5, m0, 6  ; EFGHIJKLMNOPQRST
+    vpalignr                 m4, m2, m1, 6  ; UVWXYZ......5555
     mova   [dstq+stride3q*1+0 ], m3
     mova   [dstq+stride3q*1+32], m4
-    vpalignr                m3, m5, m0, 8  ; FGHIJKLMNOPQRSTU
-    vpalignr                m4, m2, m1, 8  ; VWXYZ......55555
+    vpalignr                 m3, m5, m0, 8  ; FGHIJKLMNOPQRSTU
+    vpalignr                 m4, m2, m1, 8  ; VWXYZ......55555
     mova   [dstq+strideq*4+0 ], m3
     mova   [dstq+strideq*4+32], m4
-    vpalignr                m3, m5, m0, 10 ; GHIJKLMNOPQRSTUV
-    vpalignr                m4, m2, m1, 10 ; WXYZ......555555
+    vpalignr                 m3, m5, m0, 10 ; GHIJKLMNOPQRSTUV
+    vpalignr                 m4, m2, m1, 10 ; WXYZ......555555
     mova   [dstq+stride5q*1+0 ], m3
     mova   [dstq+stride5q*1+32], m4
-    vpalignr                m3, m5, m0, 12 ; HIJKLMNOPQRSTUVW
-    vpalignr                m4, m2, m1, 12 ; XYZ......5555555
+    vpalignr                 m3, m5, m0, 12 ; HIJKLMNOPQRSTUVW
+    vpalignr                 m4, m2, m1, 12 ; XYZ......5555555
     mova   [dstq+stride3q*2+0 ], m3
     mova   [dstq+stride3q*2+32], m4    
-    vpalignr                m3, m5, m0, 14 ; IJKLMNOPQRSTUVWX
-    vpalignr                m4, m2, m1, 14 ; YZ......55555555
+    vpalignr                 m3, m5, m0, 14 ; IJKLMNOPQRSTUVWX
+    vpalignr                 m4, m2, m1, 14 ; YZ......55555555
     mova   [dstq+stride3q*2+64], m3
     mova   [dstq+stride3q*2+96], m4
     vpalignr                m3, m5, m0, 16 ; JKLMNOPQRSTUVWXY
     vpalignr                m4, m2, m1, 16 ; Z......555555555
     ;mova   [dstq+strideq*8+0 ], m3
     ;mova   [dstq+strideq*8+32], m4
-    mova        m0, m3
-    mova        m1, m4
+    vperm2i128              m2, m3, m4, q0201          ; RSTUVWXYZ......5
+    vperm2i128              m5, m4, m4, q0101          ; 5555555555555555
+    mova                    m0, m3
+    mova                    m1, m4
     lea                   dstq, [dstq+strideq*8]
     dec                   cntd
     jg .loop
