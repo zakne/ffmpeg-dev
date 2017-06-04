@@ -893,51 +893,57 @@ cglobal vp9_ipred_dl_32x32_16, 2, 6, 7, dst, stride, l, a
     vperm2i128              m5, m0, m1, q0201          ; ijklmnopqrstuvwx
     vpalignr                m2, m5, m0, 2              ; bcdefghijklmnopq
     vpalignr                m3, m5, m0, 4              ; cdefghijklmnopqr
-    LOWPASS                  0,  2,  3                 ; BCDEFGHIJKLMNOPQ
+    LOWPASS                  0,  2,  3                 ; BCDE FGHI JKLM NOPQ
     vperm2i128              m5, m1, m4, q0201          ; yz01234555555555
     vpalignr                m2, m5, m1, 2              ; rstuvwxyz0123455
     vpalignr                m3, m5, m1, 4              ; stuvwxyz01234555
-    LOWPASS                  1,  2,  3                 ; RSTUVWXYZ......5
+    LOWPASS                  1,  2,  3                 ; RSTU VWXY Z......5
     vperm2i128              m2, m1, m4, q0201          ; Z......555555555
-    vperm2i128              m5, m0, m1, q0201          ; JKLMNOPQRSTUVWXY
+    vperm2i128              m5, m0, m1, q0201          ; JKLM NOPQ RSTU VWXY
     
     DEFINE_ARGS dst, stride, stride3, stride5, cnt
     lea               stride3q, [strideq*3]
     lea               stride5q, [strideq*5]
-    mova   [dstq+strideq*0+0 ], m0
-    mova   [dstq+strideq*0+32], m1
-    vpalignr                m3, m5, m0, 2
-    vpalignr                m4, m2, m1, 2
+    mov                   cntd, 4
+.loop:    
+    mova   [dstq+strideq*0+0 ], m0         ; BCDEFGHIJKLMNOPQ
+    mova   [dstq+strideq*0+32], m1         ; RSTUVWXYZ......5
+    vpalignr                m3, m5, m0, 2  ; CDEFGHIJKLMNOPQR
+    vpalignr                m4, m2, m1, 2  ; STUVWXYZ......55
     mova   [dstq+strideq*1+0 ], m3
     mova   [dstq+strideq*1+32], m4
-    vpalignr                m3, m5, m0, 4
-    vpalignr                m4, m2, m1, 4
+    vpalignr                m3, m5, m0, 4  ; DEFGHIJKLMNOPQRS
+    vpalignr                m4, m2, m1, 4  ; TUVWXYZ......555
     mova   [dstq+strideq*2+0 ], m3
     mova   [dstq+strideq*2+32], m4
-    vpalignr                m3, m5, m0, 6
-    vpalignr                m4, m2, m1, 6
+    vpalignr                m3, m5, m0, 6  ; EFGHIJKLMNOPQRST
+    vpalignr                m4, m2, m1, 6  ; UVWXYZ......5555
     mova   [dstq+stride3q*1+0 ], m3
     mova   [dstq+stride3q*1+32], m4
-    vpalignr                m3, m5, m0, 8
-    vpalignr                m4, m2, m1, 8
+    vpalignr                m3, m5, m0, 8  ; FGHIJKLMNOPQRSTU
+    vpalignr                m4, m2, m1, 8  ; VWXYZ......55555
     mova   [dstq+strideq*4+0 ], m3
     mova   [dstq+strideq*4+32], m4
-    vpalignr                m3, m5, m0, 10
-    vpalignr                m4, m2, m1, 10
+    vpalignr                m3, m5, m0, 10 ; GHIJKLMNOPQRSTUV
+    vpalignr                m4, m2, m1, 10 ; WXYZ......555555
     mova   [dstq+stride5q*1+0 ], m3
     mova   [dstq+stride5q*1+32], m4
-    vpalignr                m3, m5, m0, 12
-    vpalignr                m4, m2, m1, 12
+    vpalignr                m3, m5, m0, 12 ; HIJKLMNOPQRSTUVW
+    vpalignr                m4, m2, m1, 12 ; XYZ......5555555
     mova   [dstq+stride3q*2+0 ], m3
     mova   [dstq+stride3q*2+32], m4    
-    vpalignr                m3, m5, m0, 14
-    vpalignr                m4, m2, m1, 14
+    vpalignr                m3, m5, m0, 14 ; IJKLMNOPQRSTUVWX
+    vpalignr                m4, m2, m1, 14 ; YZ......55555555
     mova   [dstq+stride3q*2+64], m3
     mova   [dstq+stride3q*2+96], m4
-    vpalignr                m3, m5, m0, 16
-    vpalignr                m4, m2, m1, 16
-    mova   [dstq+strideq*8+0 ], m3
-    mova   [dstq+strideq*8+32], m4
+    vpalignr                m3, m5, m0, 16 ; JKLMNOPQRSTUVWXY
+    vpalignr                m4, m2, m1, 16 ; Z......555555555
+    ;mova   [dstq+strideq*8+0 ], m3
+    ;mova   [dstq+strideq*8+32], m4
+    mova        m0, m3
+    mova        m1, m4
+    add         dstq, strideq*8
+    jg .loop
     RET
 %endif
 
