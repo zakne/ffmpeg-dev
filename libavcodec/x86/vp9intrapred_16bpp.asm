@@ -901,7 +901,8 @@ cglobal vp9_ipred_dl_32x32_16, 2, 6, 7, dst, stride, l, a
     LOWPASS                  1,  2,  3                 ; RSTUVWXYZ......5
     vperm2i128              m2, m1, m4, q0201          ; Z......555555555
     vperm2i128              m5, m0, m1, q0201          ; JKLMNOPQRSTUVWXY
-    DEFINE_ARGS dst, stride, cnt
+    DEFINE_ARGS dst, stride, stride3, cnt
+    lea               stride3q, [strideq*3]
     mov                   cntd, 4
     
 .loop:
