@@ -899,7 +899,7 @@ cglobal vp9_ipred_dl_32x32_16, 2, 6, 7, dst, stride, l, a
     vpalignr                m3, m5, m1, 4              ; stuvwxyz01234555
     LOWPASS                  1,  2,  3                 ; RSTU VWXY Z......5
     vperm2i128              m2, m1, m4, q0201          ; Z......555555555
-    vperm2i128              m5, m0, m1, q0201          ; JKLM NOPQ RSTU VWXY
+    vperm2i128              m5, m0, m1, q0201          ; JKLMNOPQRSTUVWXY
     
     DEFINE_ARGS dst, stride, stride3, stride5, cnt
     lea               stride3q, [strideq*3]
@@ -936,13 +936,13 @@ cglobal vp9_ipred_dl_32x32_16, 2, 6, 7, dst, stride, l, a
     vpalignr                m4, m2, m1, 14 ; YZ......55555555
     mova   [dstq+stride3q*2+64], m3
     mova   [dstq+stride3q*2+96], m4
-    vpalignr                m3, m5, m0, 16 ; JKLMNOPQRSTUVWXY
-    vpalignr                m4, m2, m1, 16 ; Z......555555555
+    ;vpalignr                m3, m5, m0, 16 ; JKLMNOPQRSTUVWXY
+    ;vpalignr                m4, m2, m1, 16 ; Z......555555555
     ;mova   [dstq+strideq*8+0 ], m3
     ;mova   [dstq+strideq*8+32], m4
-    mova        m0, m3
-    mova        m1, m4
-    add         dstq, strideq*8
+    mova        m0, m5
+    mova        m1, m2
+    lea                   dstq, [dstq+strideq*8]
     jg .loop
     RET
 %endif
