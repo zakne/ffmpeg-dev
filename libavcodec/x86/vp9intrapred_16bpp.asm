@@ -1184,7 +1184,9 @@ cglobal vp9_ipred_dr_16x16_16, 4, 6, 7, dst, stride, l, a
     vpalignr                m5, m3, m0, 4              ; mnopqrstuvwxyz*a
     LOWPASS                  0,  4,  5                 ; LMNOPQRSTUVWXYZ#
     vperm2i128              m5, m1, m0, 0x30           ; ABCDEFGHTUVWXYZ#
-    mova                    [dstq+strideq*0+0], m5
+    DEFINE_ARGS dst, stride, dst8, cnt
+    lea                  dst8q, [dstq+strideq*8]
+    mova                 [dst8q+strideq*0+0], m5
     RET
 
 %endif
