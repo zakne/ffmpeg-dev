@@ -1170,6 +1170,20 @@ DR_FUNCS 2
 INIT_XMM avx
 DR_FUNCS 2
 
+%if HAVE_AVX2_EXTERNAL
+INIT_YMM avx2
+cglobal vp9_ipred_dr_16x16_16, 4, 5, 7, dst, stride, l, a
+    mova                    m0, [lq]                ; klmnopqrstuvwxyz
+    movu                    m1, [aq-2]              ; *abcdefghijklmno
+    mova                    m2, [aq]                ; abcdefghijklmnop
+    vperm2i128              m3, m1, m2, q0201       ; hijklmnoabcdefgh
+    vpalignr                m4, m2, m3, 2           ; bcdefghijklmnopa
+    LOWPASS                  1,  2,  4
+    mova                   [dst+stride*8+16], m1
+    RET
+
+%endif
+
 %macro VL_FUNCS 1 ; stack_mem_for_32x32_32bit_function
 cglobal vp9_ipred_vl_4x4_16, 2, 4, 3, dst, stride, l, a
     movifnidn               aq, amp
