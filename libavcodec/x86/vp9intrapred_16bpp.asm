@@ -1184,20 +1184,48 @@ cglobal vp9_ipred_dr_16x16_16, 4, 6, 7, dst, stride, l, a
     vpalignr                m5, m3, m0, 4              ; mnopqrstuvwxyz*a
     LOWPASS                  0,  4,  5                 ; LMNOPQRSTUVWXYZ#
     vperm2i128              m5, m0, m1, q0201          ; TUVWXYZ#ABCDEFGH
-    vperm2i128              m2, m1, m1, 0x81           ; IJKLMNO.........
     
     DEFINE_ARGS dst, stride, dst8, cnt
     lea                  dst8q, [dstq+strideq*8]
-    mov                   cntd, 8
-
-.loop:
+    
     sub                  dst8q, strideq
     mova                 [dst8q+strideq*8+0], m0
     mova                 [dst8q+strideq*0+0], m5
-    vpalignr             m0, m0, m5, 2
-    vpalignr             m5, m5, m2, 2
-    dec cntd
-    jg .loop
+    vpalignr             m3, m5, m0, 2
+    vpalignr             m4, m1, m5, 2
+    sub                  dst8q, strideq
+    mova                 [dst8q+strideq*8+0], m3
+    mova                 [dst8q+strideq*0+0], m4
+    vpalignr             m3, m5, m0, 4
+    vpalignr             m4, m1, m5, 4
+    sub                  dst8q, strideq
+    mova                 [dst8q+strideq*8+0], m3
+    mova                 [dst8q+strideq*0+0], m4
+    vpalignr             m3, m5, m0, 6
+    vpalignr             m4, m1, m5, 6
+    sub                  dst8q, strideq
+    mova                 [dst8q+strideq*8+0], m3
+    mova                 [dst8q+strideq*0+0], m4
+    vpalignr             m3, m5, m0, 6
+    vpalignr             m4, m1, m5, 6
+    mova                 [dst8q+strideq*8+0], m3
+    mova                 [dst8q+strideq*0+0], m4
+    vpalignr             m3, m5, m0, 8
+    vpalignr             m4, m1, m5, 8
+    mova                 [dst8q+strideq*8+0], m3
+    mova                 [dst8q+strideq*0+0], m4
+    vpalignr             m3, m5, m0, 10
+    vpalignr             m4, m1, m5, 10
+    mova                 [dst8q+strideq*8+0], m3
+    mova                 [dst8q+strideq*0+0], m4
+    vpalignr             m3, m5, m0, 12
+    vpalignr             m4, m1, m5, 12
+    mova                 [dst8q+strideq*8+0], m3
+    mova                 [dst8q+strideq*0+0], m4
+    vpalignr             m3, m5, m0, 14
+    vpalignr             m4, m1, m5, 14
+    mova                 [dst8q+strideq*8+0], m3
+    mova                 [dst8q+strideq*0+0], m4
     RET
 
 %endif
