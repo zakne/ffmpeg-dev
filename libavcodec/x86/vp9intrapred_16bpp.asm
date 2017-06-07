@@ -1172,14 +1172,19 @@ DR_FUNCS 2
 
 %if HAVE_AVX2_EXTERNAL
 INIT_YMM avx2
-cglobal vp9_ipred_dr_16x16_16, 4, 5, 7, dst, stride, l, a
-    mova                    m0, [lq]                ; klmnopqrstuvwxyz
-    movu                    m1, [aq-2]              ; *abcdefghijklmno
-    mova                    m2, [aq]                ; abcdefghijklmnop
-    vperm2i128              m3, m1, m2, q0201       ; hijklmnoabcdefgh
-    vpalignr                m4, m2, m3, 2           ; bcdefghijklmnopa
-    LOWPASS                  1,  2,  4
-    mova                   [dstq+strideq*8+16], m1
+cglobal vp9_ipred_dr_16x16_16, 4, 6, 7, dst, stride, l, a
+    mova                    m0, [lq]                   ; klmnopqrstuvwxyz
+    movu                    m1, [aq-2]                 ; *abcdefghijklmno
+    mova                    m2, [aq]                   ; abcdefghijklmnop
+    vperm2i128              m4, m2, m2, 0x81           ; ijklmnop........
+    vpalignr                m3, m4, m2, 2              ; bcdefghijklmnop. 
+    vperm2i128              m3, m0, m1, q0201          ; stuvwxyz*abcdefg
+    LOWPASS                  1,  2,  3                 ; ABCDEFGHIJKLMNO.
+    vpalignr                m4, m3, m0, 2              ; lmnopqrstuvwxyz*
+    vpalignr                m5, m3, m0, 4              ; mnopqrstuvwxyz*a
+    LOWPASS                  0,  4,  5                 ; LMNOPQRSTUVWXYZ#
+    vperm2i128              m5, m1, m0, 0x30           ; ABCDEFGHTUVWXYZ#
+    mova                    [dstq+strideq*0+0], m5
     RET
 
 %endif
