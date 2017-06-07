@@ -1186,9 +1186,16 @@ cglobal vp9_ipred_dr_16x16_16, 4, 6, 7, dst, stride, l, a
     vperm2i128              m5, m0, m1, q0201          ; TUVWXYZ#ABCDEFGH
     DEFINE_ARGS dst, stride, dst8, cnt
     lea                  dst8q, [dstq+strideq*8]
+    mov                   cntd, 8
+
+.loop:
     sub                  dst8q, strideq
     mova                 [dst8q+strideq*8+0], m0
     mova                 [dst8q+strideq*0+0], m5
+    vpalignr             m3, m5, m0, 2
+    mova                 [dst8q+strideq*7+0], m3
+    dec                  cntd
+    jg .loop
     RET
 
 %endif
