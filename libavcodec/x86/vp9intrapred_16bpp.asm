@@ -1179,7 +1179,7 @@ cglobal vp9_ipred_dr_16x16_16, 4, 5, 7, dst, stride, l, a
     vperm2i128              m3, m1, m2, q0201       ; hijklmnoabcdefgh
     vpalignr                m4, m2, m3, 2           ; bcdefghijklmnopa
     LOWPASS                  1,  2,  4
-    mova                   [dst+stride*8+16], m1
+    mova                   [dstq+strideq*8+16], m1
     RET
 
 %endif
