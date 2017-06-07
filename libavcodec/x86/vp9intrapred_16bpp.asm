@@ -1177,9 +1177,9 @@ cglobal vp9_ipred_dr_16x16_16, 4, 6, 7, dst, stride, l, a
     movu                    m1, [aq-2]                 ; *abcdefghijklmno
     mova                    m2, [aq]                   ; abcdefghijklmnop
     vperm2i128              m4, m2, m2, 0x81           ; ijklmnop........
-    vpalignr                m3, m4, m2, 2              ; bcdefghijklmnop. 
+    vpalignr                m5, m4, m2, 2              ; bcdefghijklmnop.
     vperm2i128              m3, m0, m1, q0201          ; stuvwxyz*abcdefg
-    LOWPASS                  1,  2,  3                 ; ABCDEFGHIJKLMNO.
+    LOWPASS                  1,  2,  5                 ; ABCDEFGHIJKLMNO.
     vpalignr                m4, m3, m0, 2              ; lmnopqrstuvwxyz*
     vpalignr                m5, m3, m0, 4              ; mnopqrstuvwxyz*a
     LOWPASS                  0,  4,  5                 ; LMNOPQRSTUVWXYZ#
