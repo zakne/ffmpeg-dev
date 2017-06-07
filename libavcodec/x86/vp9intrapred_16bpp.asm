@@ -1193,7 +1193,8 @@ cglobal vp9_ipred_dr_16x16_16, 4, 6, 7, dst, stride, l, a
     mova                 [dst8q+strideq*8+0], m0
     mova                 [dst8q+strideq*0+0], m5
     vpalignr             m3, m5, m0, 2
-    mova                 [dst8q+strideq*7+0], m3
+    sub                  dst8q, strideq
+    mova                 [dst8q+strideq+0], m3
     dec                  cntd
     jg .loop
     RET
