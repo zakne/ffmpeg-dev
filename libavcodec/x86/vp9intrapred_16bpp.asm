@@ -1208,22 +1208,27 @@ cglobal vp9_ipred_dr_16x16_16, 4, 6, 7, dst, stride, l, a
     mova                 [dst8q+strideq*0+0], m4
     vpalignr             m3, m5, m0, 6
     vpalignr             m4, m1, m5, 6
+    sub                  dst8q, strideq
     mova                 [dst8q+strideq*8+0], m3
     mova                 [dst8q+strideq*0+0], m4
     vpalignr             m3, m5, m0, 8
     vpalignr             m4, m1, m5, 8
+    sub                  dst8q, strideq
     mova                 [dst8q+strideq*8+0], m3
     mova                 [dst8q+strideq*0+0], m4
     vpalignr             m3, m5, m0, 10
     vpalignr             m4, m1, m5, 10
+    sub                  dst8q, strideq
     mova                 [dst8q+strideq*8+0], m3
     mova                 [dst8q+strideq*0+0], m4
     vpalignr             m3, m5, m0, 12
     vpalignr             m4, m1, m5, 12
+    sub                  dst8q, strideq
     mova                 [dst8q+strideq*8+0], m3
     mova                 [dst8q+strideq*0+0], m4
     vpalignr             m3, m5, m0, 14
     vpalignr             m4, m1, m5, 14
+    sub                  dst8q, strideq
     mova                 [dst8q+strideq*8+0], m3
     mova                 [dst8q+strideq*0+0], m4
     RET
