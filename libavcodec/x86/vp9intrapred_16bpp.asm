@@ -1214,7 +1214,7 @@ cglobal vp9_ipred_dr_16x16_16, 4, 6, 7, dst, stride, l, a
     mova                 [dst3q+strideq*0], m4 ; 2
     vpalignr             m3, m5, m0, 12
     vpalignr             m4, m1, m5, 12
-    mova                 [dstq+strideq3*3], m3 ; 9
+    mova                 [dstq+stride3q*3], m3 ; 9
     mova                 [dstq+strideq*1], m4 ; 1
     vpalignr             m3, m5, m0, 14
     vpalignr             m4, m1, m5, 14
