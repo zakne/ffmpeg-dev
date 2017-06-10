@@ -1172,7 +1172,7 @@ DR_FUNCS 2
 
 %if HAVE_AVX2_EXTERNAL
 INIT_YMM avx2
-cglobal vp9_ipred_dr_16x16_16, 4, 4, 6, dst, stride, l, a
+cglobal vp9_ipred_dr_16x16_16, 4, 5, 6, dst, stride, l, a
     mova                    m0, [lq]                   ; klmnopqrstuvwxyz
     movu                    m1, [aq-2]                 ; *abcdefghijklmno
     mova                    m2, [aq]                   ; abcdefghijklmnop
