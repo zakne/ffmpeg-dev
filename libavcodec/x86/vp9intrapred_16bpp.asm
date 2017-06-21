@@ -1221,10 +1221,21 @@ cglobal vp9_ipred_dr_16x16_16, 4, 5, 6, dst, stride, l, a
     mova      [dstq+strideq*0], m4                     ; 0
     mova     [dst3q+strideq*4], m5                     ; 7
     RET
+    
+cglobal vp9_ipred_dr_32x32_16, 4, 5, 8, dst, stride, l, a
+    mova                    m0, [lq]                   ; l[0-15]
+    mova                    m1, [lq+mmsize*1]          ; l[16-31]
+    movu                    m2, [aq-2]                 ; *abcdefghijklmno
+    mova                    m3, [aq]                   ; abcdefghijklmnop
+    mova                    m4, [aq+mmsize*1]          ; qrstuvwxyz012345
+    vperm2i128              m5, m3, m4, q0201          ; ijklmnopqrstuvwx
+    vpalignr                m6, m3, m5, 2
+    LOWPASS                  2,  3,  6
+    RET
 %endif
 
 
-%macro VL_FUNCS 1 ; stack_mem_for_32x32_32bit_function
+%macro VL_FUNCS 1 ; stack_mem_for_32x32_32bit_function  
 cglobal vp9_ipred_vl_4x4_16, 2, 4, 3, dst, stride, l, a
     movifnidn               aq, amp
     movu                    m0, [aq]                ; abcdefgh
