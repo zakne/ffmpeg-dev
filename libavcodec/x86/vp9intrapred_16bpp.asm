@@ -1252,8 +1252,8 @@ cglobal vp9_ipred_dr_32x32_16, 4, 5, 8, dst, stride, l, a
     mov                   cntd, 4
     sub                  dst8q, strideq
     
-    mov      [dst8q+stride24q+0 ], m0 ; 31
-    mov      [dst8q+stride24q+32], m1 ; 31
+    mova      [dst8q+stride24q+0 ], m0 ; 31
+    mova      [dst8q+stride24q+32], m1 ; 31
 
     
     RET
