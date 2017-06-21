@@ -1225,10 +1225,15 @@ cglobal vp9_ipred_dr_16x16_16, 4, 5, 6, dst, stride, l, a
 cglobal vp9_ipred_dr_32x32_16, 4, 5, 8, dst, stride, l, a
     mova                    m0, [lq+mmsize*0+0]        ; l[0-15]
     mova                    m1, [lq+mmsize*1+0]        ; l[16-31]
+    
     movu                    m2, [aq+mmsize*0-2]        ; *abcdefghijklmno
     mova                    m3, [aq+mmsize*0+0]        ; abcdefghijklmnop
     mova                    m4, [aq+mmsize*1+0]        ; qrstuvwxyz012345
     
+    vperm2i128              m7, m1, m2, q0201          ; stuvwxyz*abcdefg
+    vpalignr                m5, m7, m1, 2              ; lmnopqrstuvwxyz*
+    vpalignr                m6, m7, m1, 4              ; mnopqrstuvwxyz*a
+    LOWPASS                  1,  5,  6
     vperm2i128              m5, m3, m4, q0201          ; ijklmnopqrstuvwx
     vpalignr                m6, m5, m3, 2              ; bcdefghijklmnopq
     LOWPASS                  2,  3,  6                 ; ABCDEFGHIJKLMNOP
@@ -1236,6 +1241,7 @@ cglobal vp9_ipred_dr_32x32_16, 4, 5, 8, dst, stride, l, a
     vperm2i128              m6, m4, m4, q2001          ; yz012345........
     vpalignr                m7, m6, m4, 2              ; rstuvwxyz012345.
     LOWPASS                  3,  4,  7                 ; QRSTUVWXYZ01234.
+    
     
     RET
 %endif
