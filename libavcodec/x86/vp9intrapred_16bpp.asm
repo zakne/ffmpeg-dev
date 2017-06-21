@@ -1230,9 +1230,9 @@ cglobal vp9_ipred_dr_32x32_16, 4, 5, 8, dst, stride, l, a
     mova                    m3, [aq+mmsize*0+0]        ; abcdefghijklmnop
     mova                    m4, [aq+mmsize*1+0]        ; qrstuvwxyz012345
     
-    vperm2i128              m5, m0, m1, q0201           
-    vpalignr                m6, m5, m0, 2              
-    vpalignr                m7, m5, m0, 4              
+    vperm2i128              m5, m1, m0, q0201           
+    vpalignr                m6, m5, m1, 2              
+    vpalignr                m7, m5, m1, 4              
     LOWPASS                  0,  6,  7
     vperm2i128              m7, m1, m2, q0201          ; stuvwxyz*abcdefg
     vpalignr                m5, m7, m1, 2              ; lmnopqrstuvwxyz*
