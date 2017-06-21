@@ -1235,7 +1235,7 @@ cglobal vp9_ipred_dr_32x32_16, 4, 5, 8, dst, stride, l, a
     movu                    m3, [aq+mmsize*1-2]        ; pqrstuvwxyz01234
     vperm2i128              m6, m4, m4, q2001          ; yz012345........
     vpalignr                m7, m6, m4, 2              ; rstuvwxyz012345.
-    LOWPASS                  4,  3,  7                 ; QRSTUVWXYZ01234.
+    LOWPASS                  3,  4,  7                 ; QRSTUVWXYZ01234.
     
     RET
 %endif
