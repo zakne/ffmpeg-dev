@@ -1287,10 +1287,8 @@ cglobal vp9_ipred_dr_32x32_16, 4, 6, 8, dst, stride, l, a
     
     vpalignr                      m6, m4, m1, 16
     vpalignr                      m7, m5, m0, 16
-    
-    ;vperm2i128                    m5, m3, m4, q0201
-    ;vperm2i128                    m2, m4, m4, q0101
-    
+    mova                          m4, m2
+    mova                          m5, m0
     mova                          m0, m7
     mova                          m1, m6
     
