@@ -1222,7 +1222,7 @@ cglobal vp9_ipred_dr_16x16_16, 4, 5, 6, dst, stride, l, a
     mova     [dst3q+strideq*4], m5                     ; 7
     RET
 
-cglobal vp9_ipred_dr_32x32_16, 4, 5, 8, dst, stride, l, a
+cglobal vp9_ipred_dr_32x32_16, 4, 6, 8, dst, stride, l, a
     mova                    m0, [lq+mmsize*0+0]        ; l[0-15]
     mova                    m1, [lq+mmsize*1+0]        ; l[16-31]
     movu                    m2, [aq+mmsize*0-2]        ; *abcdefghijklmno
@@ -1249,7 +1249,7 @@ cglobal vp9_ipred_dr_32x32_16, 4, 5, 8, dst, stride, l, a
     lea               stride3q, [strideq*3]
     lea               stride5q, [stride3q+strideq*2]
     lea               stride7q, [strideq*4+stride3q]
-    lea                 dst24q, [dstq+stride3q*8]
+    lea                 dst24q, [dst24q+stride3q*8]
     mov                   cntd, 4
 
 .loop:
