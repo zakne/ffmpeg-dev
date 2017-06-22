@@ -1245,7 +1245,7 @@ cglobal vp9_ipred_dr_32x32_16, 4, 5, 8, dst, stride, l, a
     vpalignr                m7, m6, m4, 2              ; rstuvwxyz012345.
     LOWPASS                  3,  4,  7                 ; QRSTUVWXYZ01234.
     
-    vperm2i128              m4, m1, m2, q0201          ; TUVWXYZ#QRSTUVWX
+    vperm2i128              m4, m1, m2, q0201          ; TUVWXYZ#ABCDEFGH
     vperm2i128              m5, m0, m1, q0201          ; L[0-7]LMNOPQRS
     
     DEFINE_ARGS dst8, stride, stride8, stride24, cnt
@@ -1253,8 +1253,8 @@ cglobal vp9_ipred_dr_32x32_16, 4, 5, 8, dst, stride, l, a
     lea              stride24q, [stride8q*3]
     lea                  dst8q, [dst8q+strideq*8]
     mov                   cntd, 4
+    
     sub                  dst8q, strideq
-
     mova      [dst8q+stride24q+0 ], m0                  ; 31
     mova      [dst8q+stride24q+32], m1                  ; 31
     vpalignr                    m6, m4, m1, 2
@@ -1267,12 +1267,32 @@ cglobal vp9_ipred_dr_32x32_16, 4, 5, 8, dst, stride, l, a
     sub                  dst8q, strideq
     mova      [dst8q+stride24q+0 ], m7                  ; 29
     mova      [dst8q+stride24q+32], m6                  ; 29
-    vpalignr                    m6, m4, m1, 4
-    vpalignr                    m7, m5, m0, 4
+    vpalignr                    m6, m4, m1, 6
+    vpalignr                    m7, m5, m0, 6
     sub                  dst8q, strideq
-    mova      [dst8q+stride24q+0 ], m7                  ; 28
-    mova      [dst8q+stride24q+32], m6                  ; 28
-
+    mova      [dst8q+stride24q+0 ], m7                  ; 27
+    mova      [dst8q+stride24q+32], m6                  ; 27
+    vpalignr                    m6, m4, m1, 8
+    vpalignr                    m7, m5, m0, 8
+    sub                  dst8q, strideq
+    mova      [dst8q+stride24q+0 ], m7                  ; 26
+    mova      [dst8q+stride24q+32], m6                  ; 26
+    vpalignr                    m6, m4, m1, 10
+    vpalignr                    m7, m5, m0, 10
+    sub                  dst8q, strideq
+    mova      [dst8q+stride24q+0 ], m7                  ; 25
+    mova      [dst8q+stride24q+32], m6                  ; 25
+    vpalignr                    m6, m4, m1, 12
+    vpalignr                    m7, m5, m0, 12
+    sub                  dst8q, strideq
+    mova      [dst8q+stride24q+0 ], m7                  ; 24
+    mova      [dst8q+stride24q+32], m6                  ; 24
+    vpalignr                    m6, m4, m1, 14
+    vpalignr                    m7, m5, m0, 14
+    sub                  dst8q, strideq
+    mova      [dst8q+stride24q+0 ], m7                  ; 23
+    mova      [dst8q+stride24q+32], m6                  ; 23
+    
     RET
 %endif
 
