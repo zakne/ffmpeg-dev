@@ -1228,7 +1228,7 @@ cglobal vp9_ipred_dr_32x32_16, 4, 5, 8, dst, stride, l, a
     movu                    m2, [aq+mmsize*0-2]        ; *abcdefghijklmno
     mova                    m3, [aq+mmsize*0+0]        ; abcdefghijklmnop
     mova                    m4, [aq+mmsize*1+0]        ; qrstuvwxyz012345
-    
+
     vperm2i128              m5, m0, m1, q0201          ; lmnopqrstuvwxyz0
     vpalignr                m6, m5, m0, 2              ; mnopqrstuvwxyz0q
     vpalignr                m7, m5, m0, 4              ; nopqrstuvwxyz0q
@@ -1245,17 +1245,24 @@ cglobal vp9_ipred_dr_32x32_16, 4, 5, 8, dst, stride, l, a
     vpalignr                m7, m6, m4, 2              ; rstuvwxyz012345.
     LOWPASS                  3,  4,  7                 ; QRSTUVWXYZ01234.
     
+    vperm2i128              m4, m1, m3, q0201          ; TUVWXYZ#QRSTUVWX
+    vperm2i128              m5, m0, m1, q0201          ; L[0-7]LMNOPQRS
+    
     DEFINE_ARGS dst8, stride, stride8, stride24, cnt
     lea               stride8q, [strideq*8]
     lea              stride24q, [stride8q*3]
     lea                  dst8q, [dst8q+strideq*8]
     mov                   cntd, 4
     sub                  dst8q, strideq
-    
-    mova      [dst8q+stride24q+0 ], m0 ; 31
-    mova      [dst8q+stride24q+32], m1 ; 31
 
-    
+    mova      [dst8q+stride24q+0 ], m0                  ; 31
+    mova      [dst8q+stride24q+32], m1                  ; 31
+    vpalignr                    m6, m4, m1, 2
+    vpalignr                    m7, m5, m0, 2
+    sub                  dst8q, strideq
+    mova      [dst8q+stride24q+0 ], m6                  ; 30
+    mova      [dst8q+stride24q+32], m7                  ; 30
+
     RET
 %endif
 
