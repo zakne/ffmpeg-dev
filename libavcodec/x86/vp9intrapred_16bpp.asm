@@ -1223,7 +1223,7 @@ cglobal vp9_ipred_dr_16x16_16, 4, 5, 6, dst, stride, l, a
     RET
 
 %if ARCH_X86_64
-cglobal vp9_ipred_dr_32x32_16, 4, 6, 10, dst, stride, l, a
+cglobal vp9_ipred_dr_32x32_16, 4, 7, 10, dst, stride, l, a
     mova                    m0, [lq+mmsize*0+0]        ; l[0-15]
     mova                    m1, [lq+mmsize*1+0]        ; l[16-31]
     movu                    m2, [aq+mmsize*0-2]        ; *abcdefghijklmno
@@ -1247,13 +1247,13 @@ cglobal vp9_ipred_dr_32x32_16, 4, 6, 10, dst, stride, l, a
     vperm2i128              m4, m1, m2, q0201          ; TUVWXYZ#ABCDEFGH
     vperm2i128              m5, m0, m1, q0201          ; L[7-15]LMNOPQRS
     vperm2i128              m8, m2, m3, q0201          ; IJKLMNOPQRSTUVWX
-    DEFINE_ARGS dst8, stride, stride3, stride7, stride24, cnt
+    DEFINE_ARGS dst8, stride, stride3, stride7, stride5, stride24, cnt
     lea               stride3q, [strideq*3]
-    ;lea               stride5q, [stride3q+strideq*2]
+    lea               stride5q, [stride3q+strideq*2]
     lea               stride24q, [stride3q*8]
     lea               stride7q, [strideq*4+stride3q]
     lea                  dst8q, [dst8q+stride7q]
-    mov                   cntd, 4
+    mov                   cntd, 2
 
 ;.loop:
     mova       [dst8q+stride24q+0 ], m0                ; 31 23 15 7
@@ -1282,8 +1282,8 @@ cglobal vp9_ipred_dr_32x32_16, 4, 6, 10, dst, stride, l, a
     sub                     stride24q, strideq
     mova        [dst8q+stride24q+0 ], m7                ; 28 20 12 4
     mova        [dst8q+stride24q+32], m6                ; 28 20 12 4
-    mova        [dst8q+stride7q+0], m6                
-    mova        [dst8q+stride7q+32], m9                
+    mova        [dst8q+stride5q+0], m6                
+    mova        [dst8q+stride5q+32], m9                
     vpalignr                      m6, m4, m1, 8
     vpalignr                      m7, m5, m0, 8
     vpalignr                      m9, m8, m2, 8
