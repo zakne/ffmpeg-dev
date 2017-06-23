@@ -1252,12 +1252,11 @@ cglobal vp9_ipred_dr_32x32_16, 4, 6, 10, dst, stride, l, a
     lea               stride5q, [stride3q+strideq*2]
     lea               stride7q, [strideq*4+stride3q]
     lea                  dst8q, [dst8q+strideq*8]
-    lea                 dst24q, [dst24q+stride3q*8]
+    lea                 dst24q, [dst8q+stride5q*8]
     mov                   cntd, 2
 
-.loop:
-    sub                       dst24q, strideq
     sub                        dst8q, strideq
+.loop:
     mova       [dst24q+strideq*8+0 ], m0                ; 31 23 15 7
     mova       [dst24q+strideq*8+32], m1                ; 31 23 15 7
     mova         [dst8q+strideq*8+0], m1                ; 15
