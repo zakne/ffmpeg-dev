@@ -1251,13 +1251,14 @@ cglobal vp9_ipred_dr_32x32_16, 4, 7, 10, dst, stride, l, a
     lea               stride3q, [strideq*3]
     lea               stride5q, [stride3q+strideq*2]
     lea               stride7q, [strideq*4+stride3q]
-    lea                  dst8q, [dst8q+stride7q]
+    lea                  dst8q, [dst8q+strideq*8]
     lea                 dst24q, [dst8q+stride3q*8]
     mov                   cntd, 2
     
     sub                 dst24q, stride7q
+.loop:
     sub                 dst24q, strideq
-;.loop:
+    sub                  dst8q, strideq
     mova       [dst24q+strideq*8+0 ], m0                ; 31 23 15 7
     mova       [dst24q+strideq*8+32], m1                ; 31 23 15 7
     mova         [dst8q+strideq*8+0], m1
@@ -1311,21 +1312,19 @@ cglobal vp9_ipred_dr_32x32_16, 4, 7, 10, dst, stride, l, a
     mova        [dst24q+strideq+32], m6                ; 24 16 8 0
     mova        [dst8q+strideq+0], m6
     mova        [dst8q+strideq+32], m9
-
     
-    ;vpalignr                      m6, m4, m1, 16
-    ;vpalignr                      m7, m5, m0, 16
+    mova                          m4, m2
+    mova                          m5, m1
+    mova                          m2, m3
     
-    ;mova                          m4, m2
-    ;mova                          m5, m1
-    
-    ;mova                          m0, m7
-    ;mova                          m1, m6
+    mova                          m0, m7
+    mova                          m1, m6
+    mova                          m2, m8
     
     sub                       dst24q, stride7q
     sub                       dst8q, stride7q
-    ;dec                         cntd
-    ;jg .loop
+    dec                         cntd
+    jg .loop
     RET
 %endif    
 %endif
