@@ -1250,7 +1250,7 @@ cglobal vp9_ipred_dr_32x32_16, 4, 6, 10, dst, stride, l, a
     DEFINE_ARGS dst8, stride, stride3, stride7, stride24, cnt
     lea               stride3q, [strideq*3]
     ;lea               stride5q, [stride3q+strideq*2]
-    lea               stride24q, [strideq+stride3q*8]
+    lea               stride24q, [stride3q*8]
     lea               stride7q, [strideq*4+stride3q]
     lea                  dst8q, [dst8q+stride7q]
     mov                   cntd, 4
