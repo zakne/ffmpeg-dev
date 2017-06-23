@@ -1259,15 +1259,63 @@ cglobal vp9_ipred_dr_32x32_16, 4, 6, 10, dst, stride, l, a
     mova       [dst8q+stride24q+0 ], m0                ; 31 23 15 7
     mova       [dst8q+stride24q+32], m1                ; 31 23 15 7
     mova         [dst8q+strideq*8+0], m1
-    mova         [dst8q+strideq*8+32], m8
+    mova         [dst8q+strideq*8+32], m2
     vpalignr                      m6, m4, m1, 2
     vpalignr                      m7, m5, m0, 2
-    vpalignr                      m9, m8, m3, 2
+    vpalignr                      m9, m8, m2, 2
     sub                     stride24q, strideq
     mova        [dst8q+stride24q+0 ], m7                ; 30 22 14 6
     mova        [dst8q+stride24q+32], m6                ; 30 22 14 6
-    mova        [dst8q+stride7q+0], m6                ; 30 22 14 6
-    mova        [dst8q+stride7q+32], m9                ; 30 22 14 6
+    mova        [dst8q+stride7q+0], m6                
+    mova        [dst8q+stride7q+32], m9                
+    vpalignr                      m6, m4, m1, 4
+    vpalignr                      m7, m5, m0, 4
+    vpalignr                      m9, m8, m2, 4
+    sub                     stride24q, strideq
+    mova        [dst8q+stride24q+0 ], m7                ; 29 21 13 5
+    mova        [dst8q+stride24q+32], m6                ; 29 21 13 5
+    mova        [dst8q+stride3q*2+0], m6                
+    mova       [dst8q+stride3q*2+32], m9                
+    vpalignr                      m6, m4, m1, 6
+    vpalignr                      m7, m5, m0, 6
+    vpalignr                      m9, m8, m2, 6
+    sub                     stride24q, strideq
+    mova        [dst8q+stride24q+0 ], m7                ; 28 20 12 4
+    mova        [dst8q+stride24q+32], m6                ; 28 20 12 4
+    mova        [dst8q+stride7q+0], m6                
+    mova        [dst8q+stride7q+32], m9                
+    vpalignr                      m6, m4, m1, 8
+    vpalignr                      m7, m5, m0, 8
+    vpalignr                      m9, m8, m2, 8
+    sub                     stride24q, strideq
+    mova        [dst8q+stride24q+0 ], m7                ; 27 19 11 3
+    mova        [dst8q+stride24q+32], m6                ; 27 19 11 3
+    mova        [dst8q+strideq*4+0], m6
+    mova        [dst8q+strideq*4+32], m9
+    vpalignr                      m6, m4, m1, 10
+    vpalignr                      m7, m5, m0, 10
+    vpalignr                      m9, m8, m2, 10
+    sub                     stride24q, strideq
+    mova        [dst8q+stride24q+0 ], m7                ; 26 18 10 2
+    mova        [dst8q+stride24q+32], m6                ; 26 18 10 2
+    mova        [dst8q+stride3q+0], m6
+    mova        [dst8q+stride3q+32], m9               
+    vpalignr                      m6, m4, m1, 12
+    vpalignr                      m7, m5, m0, 12
+    vpalignr                      m9, m8, m2, 12
+    sub                     stride24q, strideq
+    mova        [dst8q+stride24q+0 ], m7                ; 25 17 9 1
+    mova        [dst8q+stride24q+32], m6                ; 25 17 9 1
+    mova        [dst8q+strideq*2+0], m6
+    mova        [dst8q+strideq*2+32], m9               
+    vpalignr                      m6, m4, m1, 14
+    vpalignr                      m7, m5, m0, 14
+    vpalignr                      m9, m8, m2, 14
+    sub                     stride24q, strideq
+    mova        [dst8q+stride24q+0 ], m7                ; 24 16 8 0
+    mova        [dst8q+stride24q+32], m6                ; 24 16 8 0
+    mova        [dst8q+strideq+0], m6
+    mova        [dst8q+strideq+32], m9               
 
     
     ;vpalignr                      m6, m4, m1, 16
