@@ -1256,8 +1256,8 @@ cglobal vp9_ipred_dr_32x32_16, 4, 6, 10, dst, stride, l, a
     mov                   cntd, 4
 
 ;.loop:
-    mova       [dst8q+stride24q*8+0 ], m0                ; 31 23 15 7
-    mova       [dst8q+stride24q*8+32], m1                ; 31 23 15 7
+    mova       [dst8q+stride24q+0 ], m0                ; 31 23 15 7
+    mova       [dst8q+stride24q+32], m1                ; 31 23 15 7
     mova         [dst8q+strideq*8+0], m1
     mova         [dst8q+strideq*8+32], m8
     vpalignr                      m6, m4, m1, 2
