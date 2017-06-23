@@ -1256,7 +1256,7 @@ cglobal vp9_ipred_dr_32x32_16, 4, 7, 10, dst, stride, l, a
     mov                   cntd, 2
     
     sub                 dst24q, stride7q
-.loop:
+;.loop:
     sub                 dst24q, strideq
     sub                  dst8q, strideq
     mova       [dst24q+strideq*8+0 ], m0                ; 31 23 15 7
@@ -1321,10 +1321,10 @@ cglobal vp9_ipred_dr_32x32_16, 4, 7, 10, dst, stride, l, a
     mova                          m1, m6
     mova                          m2, m8
     
-    sub                       dst24q, stride7q
-    sub                       dst8q, stride7q
-    dec                         cntd
-    jg .loop
+   ; sub                       dst24q, stride7q
+    ;sub                       dst8q, stride7q
+    ;dec                         cntd
+    ;jg .loop
     RET
 %endif    
 %endif
