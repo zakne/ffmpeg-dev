@@ -1273,7 +1273,7 @@ cglobal vp9_ipred_dr_32x32_16, 4, 7, 10, dst, stride, l, a
     vpalignr                      m7, m5, m0, 4
     vpalignr                      m9, m8, m2, 4
     mova        [dst24q+stride3q*2+0], m7                ; 29 21 13 5
-    mova        [dst24q+stride3q*2+32], m6                ; 29 21 13 5
+    mova        [dst24q+stride3q*2+32], m6               ; 29 21 13 5
     mova        [dst8q+stride3q*2+0], m6                
     mova       [dst8q+stride3q*2+32], m9                
     vpalignr                      m6, m4, m1, 6
@@ -1312,13 +1312,16 @@ cglobal vp9_ipred_dr_32x32_16, 4, 7, 10, dst, stride, l, a
     mova        [dst8q+strideq+0], m6
     mova        [dst8q+strideq+32], m9
     
-    mova                          m4, m2
-    mova                          m5, m1
-    mova                          m2, m3
     
-    mova                          m0, m7
-    mova                          m1, m6
+    mova                          m0, m5
+    mova                          m5, m1
+    mova                          m1, m4
+    
+    mova                          m4, m2
     mova                          m2, m8
+    
+    mova                          m8, m3
+    
     
     sub                       dst24q, stride7q
     sub                       dst8q, stride7q
