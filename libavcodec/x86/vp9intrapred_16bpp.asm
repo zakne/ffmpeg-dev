@@ -1543,15 +1543,15 @@ INIT_YMM avx2
 cglobal vp9_ipred_vl_16x16_16, 2, 4, 6, dst, stride, l, a
     movifnidn               aq, amp
     mova                    m0, [aq]                ; abcdefghijklmnop
-    vpbroadcastw           xm1, [aq+30]             ; pppppppp
-    vperm2i128              m1, m0, q0201           ; ijklmnoppppppppp
-    vpalignr                m2, m0, m1, 2           ; bcdefghijklmnopp
-    vpalignr                m3, m0, m1, 4           ; cdefghijklmnoppp
+    vpbroadcastw           xm5, [aq+30]             ; pppppppp
+    vperm2i128              m1, m0, m5, q0201           ; ijklmnoppppppppp
+    vpalignr                m2, m0, m5, 2           ; bcdefghijklmnopp
+    vpalignr                m3, m0, m5, 4           ; cdefghijklmnoppp
     mova                    m4, m2
     pavgw                   m4, m0
     LOWPASS                  0, 2, 3                ; BCDEFGHIJKLMNOPp
-    vperm2i128              m2, m0, m1, q0201       ; JKLMNOPppppppppp
-    vperm2i128              m3, m4, m1, q0201       ; JKLMNOPppppppppp
+    vperm2i128              m2, m0, m5, q0201       ; JKLMNOPppppppppp
+    vperm2i128              m3, m4, m5, q0201       ; JKLMNOPppppppppp
     DEFINE_ARGS dst, stride, stride3, cnt
     mov                   cntd, 2
     lea               stride3q, [strideq*3]
