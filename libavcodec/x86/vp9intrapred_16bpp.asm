@@ -1544,9 +1544,9 @@ cglobal vp9_ipred_vl_16x16_16, 2, 4, 6, dst, stride, l, a
     movifnidn               aq, amp
     mova                    m0, [aq]                ; abcdefghijklmnop
     vpbroadcastw           xm5, [aq+30]             ; pppppppp
-    vperm2i128              m1, m0, m5, q0201           ; ijklmnoppppppppp
-    vpalignr                m2, m0, m5, 2           ; bcdefghijklmnopp
-    vpalignr                m3, m0, m5, 4           ; cdefghijklmnoppp
+    vperm2i128              m1, m0, m5, q0201       ; ijklmnoppppppppp
+    vpalignr                m2, m5, m0, 2           ; bcdefghijklmnopp
+    vpalignr                m3, m5, m0, 4           ; cdefghijklmnoppp
     mova                    m4, m2
     pavgw                   m4, m0
     LOWPASS                  0, 2, 3                ; BCDEFGHIJKLMNOPp
