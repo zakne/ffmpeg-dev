@@ -1550,45 +1550,44 @@ cglobal vp9_ipred_vl_16x16_16, 2, 4, 6, dst, stride, l, a
     mova                    m4, m2
     pavgw                   m4, m0
     LOWPASS                  0, 2, 3                ; BCDEFGHIJKLMNOPp
-    vperm2i128              m2, m0, m5, q0201       ; JKLMNOPppppppppp
-    vperm2i128              m3, m4, m5, q0201       ; JKLMNOPppppppppp
-    DEFINE_ARGS dst, stride, stride3, cnt
-    mov                   cntd, 2
+    vperm2i128              m2, m0, m5, q0201
+    vperm2i128              m3, m4, m5, q0201
+    DEFINE_ARGS dst, stride, stride3
     lea               stride3q, [strideq*3]
-    
-    mova      [dstq+strideq*0], m4                  ; 0
-    mova      [dstq+strideq*1], m0                  ; 1
+
+    mova      [dstq+strideq*0], m4
+    mova      [dstq+strideq*1], m0
     vpalignr                m1, m2, m0, 2
     vpalignr                m5, m3, m4, 2
-    mova      [dstq+strideq*2], m5                  ; 2
-    mova      [dstq+stride3q ], m1                  ; 3
+    mova      [dstq+strideq*2], m5
+    mova      [dstq+stride3q ], m1
     vpalignr                m1, m2, m0, 4
     vpalignr                m5, m3, m4, 4
-    mova      [dstq+strideq*4], m5                  ; 4
     lea                   dstq, [dstq+strideq*4]
-    mova      [dstq+strideq*1], m1                  ; 5
+    mova      [dstq+strideq*0], m5
+    mova      [dstq+strideq*1], m1
     vpalignr                m1, m2, m0, 6
     vpalignr                m5, m3, m4, 6
-    mova      [dstq+strideq*2], m5                  ; 6
-    mova      [dstq+stride3q ], m1                  ; 7
+    mova      [dstq+strideq*2], m5
+    mova      [dstq+stride3q ], m1
     vpalignr                m1, m2, m0, 8
     vpalignr                m5, m3, m4, 8
-    mova      [dstq+strideq*4], m5                  ; 8
     lea                   dstq, [dstq+strideq*4]
-    mova      [dstq+strideq*1], m1                  ; 9
+    mova      [dstq+strideq*0], m5
+    mova      [dstq+strideq*1], m1
     vpalignr                m1, m2, m0, 10
     vpalignr                m5, m3, m4, 10
-    mova      [dstq+strideq*2], m5                  ; 10
-    mova      [dstq+stride3q ], m1                  ; 11
+    mova      [dstq+strideq*2], m5
+    mova      [dstq+stride3q ], m1
     vpalignr                m1, m2, m0, 12
     vpalignr                m5, m3, m4, 12
-    mova      [dstq+strideq*4], m5                  ; 12
     lea                   dstq, [dstq+strideq*4]
-    mova      [dstq+strideq*1], m1                  ; 13
+    mova      [dstq+strideq*0], m5
+    mova      [dstq+strideq*1], m1
     vpalignr                m1, m2, m0, 14
     vpalignr                m5, m3, m4, 14
-    mova      [dstq+strideq*2], m5                  ; 14
-    mova      [dstq+stride3q ], m1                  ; 15
+    mova      [dstq+strideq*2], m5
+    mova      [dstq+stride3q ], m1
     RET
 %endif
 
