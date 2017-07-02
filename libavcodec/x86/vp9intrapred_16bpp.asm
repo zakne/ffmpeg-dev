@@ -1538,6 +1538,59 @@ VL_FUNCS 1
 INIT_XMM avx
 VL_FUNCS 1
 
+%if HAVE_AVX2_EXTERNAL
+INIT_YMM avx2
+cglobal vp9_ipred_vl_16x16_16, 2, 4, 6, dst, stride, l, a
+    movifnidn               aq, amp
+    mova                    m0, [aq]                ; abcdefghijklmnop
+    vpbroadcastw           xm1, [aq+30]             ; pppppppp
+    vperm2i128              m1, m0, q0201           ; ijklmnoppppppppp
+    vpalignr                m2, m0, m1, 2           ; bcdefghijklmnopp
+    vpalignr                m3, m0, m1, 4           ; cdefghijklmnoppp
+    mova                    m4, m2
+    pavgw                   m4, m0
+    LOWPASS                  0, 2, 3                ; BCDEFGHIJKLMNOPp
+    vperm2i128              m2, m0, m1, q0201       ; JKLMNOPppppppppp
+    vperm2i128              m3, m4, m1, q0201       ; JKLMNOPppppppppp
+    DEFINE_ARGS dst, stride, stride3, cnt
+    mov                   cntd, 2
+    lea               stride3q, [strideq*3]
+    
+    mova      [dstq+strideq*0], m4                  ; 0
+    mova      [dstq+strideq*1], m0                  ; 1
+    vpalignr                m1, m2, m0, 2
+    vpalignr                m5, m3, m4, 2
+    mova      [dstq+strideq*2], m5                  ; 2
+    mova      [dstq+stride3q ], m1                  ; 3
+    vpalignr                m1, m2, m0, 4
+    vpalignr                m5, m3, m4, 4
+    mova      [dstq+strideq*4], m5                  ; 4
+    lea                   dstq, [dstq+strideq*4]
+    mova      [dstq+strideq*1], m1                  ; 5
+    vpalignr                m1, m2, m0, 6
+    vpalignr                m5, m3, m4, 6
+    mova      [dstq+strideq*2], m5                  ; 6
+    mova      [dstq+stride3q ], m1                  ; 7
+    vpalignr                m1, m2, m0, 8
+    vpalignr                m5, m3, m4, 8
+    mova      [dstq+strideq*4], m5                  ; 8
+    lea                   dstq, [dstq+strideq*4]
+    mova      [dstq+strideq*1], m1                  ; 9
+    vpalignr                m1, m2, m0, 10
+    vpalignr                m5, m3, m4, 10
+    mova      [dstq+strideq*2], m5                  ; 10
+    mova      [dstq+stride3q ], m1                  ; 11
+    vpalignr                m1, m2, m0, 12
+    vpalignr                m5, m3, m4, 12
+    mova      [dstq+strideq*4], m5                  ; 12
+    lea                   dstq, [dstq+strideq*4]
+    mova      [dstq+strideq*1], m1                  ; 13
+    vpalignr                m1, m2, m0, 14
+    vpalignr                m5, m3, m4, 14
+    mova      [dstq+strideq*2], m5                  ; 14
+    mova      [dstq+stride3q ], m1                  ; 15
+%endif
+
 %macro VR_FUNCS 0
 cglobal vp9_ipred_vr_4x4_16, 4, 4, 3, dst, stride, l, a
     movu                    m0, [aq-2]
