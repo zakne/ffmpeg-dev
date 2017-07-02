@@ -1589,6 +1589,7 @@ cglobal vp9_ipred_vl_16x16_16, 2, 4, 6, dst, stride, l, a
     vpalignr                m5, m3, m4, 14
     mova      [dstq+strideq*2], m5                  ; 14
     mova      [dstq+stride3q ], m1                  ; 15
+    RET
 %endif
 
 %macro VR_FUNCS 0
