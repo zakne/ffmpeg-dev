@@ -909,34 +909,34 @@ cglobal vp9_ipred_dl_32x32_16, 2, 6, 7, dst, stride, l, a
     mov                   cntd, 2
 
 .loop:
-    mova   [dstq+strideq*0 + 0], m0                       ; 0
+    mova   [dstq+strideq*0 + 0], m0
     mova   [dstq+strideq*0 +32], m1
-    mova  [dst16q+strideq*0+ 0], m1                       ; 16
-    mova  [dst16q+strideq*0+32], m6                       ; 16
+    mova  [dst16q+strideq*0+ 0], m1
+    mova  [dst16q+strideq*0+32], m6
     vpalignr                 m3, m5, m0, 2
     vpalignr                 m4, m2, m1, 2
-    mova   [dstq+strideq*1 + 0], m3                       ; 1
+    mova   [dstq+strideq*1 + 0], m3
     mova   [dstq+strideq*1 +32], m4
-    mova  [dst16q+strideq*1 +0], m4                       ; 17
-    mova [dst16q+strideq*1 +32], m6                       ; 17
+    mova  [dst16q+strideq*1 +0], m4
+    mova [dst16q+strideq*1 +32], m6
     vpalignr                 m3, m5, m0, 4
     vpalignr                 m4, m2, m1, 4
-    mova   [dstq+strideq*2 + 0], m3                       ; 2
+    mova   [dstq+strideq*2 + 0], m3
     mova   [dstq+strideq*2 +32], m4
-    mova   [dst16q+strideq*2+0], m4                       ; 18
-    mova  [dst16q+strideq*2+32], m6                       ; 18
+    mova   [dst16q+strideq*2+0], m4
+    mova  [dst16q+strideq*2+32], m6
     vpalignr                 m3, m5, m0, 6
     vpalignr                 m4, m2, m1, 6  
-    mova   [dstq+stride3q*1+ 0], m3                       ; 3
-    mova   [dstq+stride3q*1+32], m4                       ; 19
-    mova  [dst16q+stride3q*1+0], m4                       ; 19
-    mova [dst16q+stride3q*1+32], m6                       ; 19
+    mova   [dstq+stride3q*1+ 0], m3
+    mova   [dstq+stride3q*1+32], m4
+    mova  [dst16q+stride3q*1+0], m4
+    mova [dst16q+stride3q*1+32], m6
     vpalignr                 m3, m5, m0, 8
     vpalignr                 m4, m2, m1, 8
     lea                    dstq, [dstq+strideq*4]
     lea                  dst16q, [dst16q+strideq*4]
-    mova   [dstq+strideq*0 + 0], m3                       ; 4
-    mova   [dstq+strideq*0 +32], m4                     
+    mova   [dstq+strideq*0 + 0], m3
+    mova   [dstq+strideq*0 +32], m4
     mova  [dst16q+strideq*0 +0], m4
     mova [dst16q+strideq*0 +32], m6
     vpalignr                 m3, m5, m0, 10
@@ -957,12 +957,10 @@ cglobal vp9_ipred_dl_32x32_16, 2, 6, 7, dst, stride, l, a
     mova    [dstq+stride3q+ 32], m4
     mova   [dst16q+stride3q+ 0], m4
     mova   [dst16q+stride3q+32], m6
-    ;vpalignr                 m3, m5, m0, 16
-    ;vpalignr                 m4, m2, m1, 16
     mova                     m0, m5
     mova                     m1, m2
-    vperm2i128               m5, m5, m2, q0201
     mova                     m2, m6
+    vperm2i128               m5, m5, m2, q0201
     lea                    dstq, [dstq+strideq*4]
     lea                  dst16q, [dst16q+strideq*4]
     dec                    cntd
