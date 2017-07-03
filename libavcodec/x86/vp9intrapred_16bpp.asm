@@ -959,8 +959,8 @@ cglobal vp9_ipred_dl_32x32_16, 2, 6, 7, dst, stride, l, a
     mova   [dst16q+stride3q+32], m6
     mova                     m0, m5
     mova                     m1, m2
-    mova                     m2, m6
     vperm2i128               m5, m5, m2, q0201
+    mova                     m2, m6
     lea                    dstq, [dstq+strideq*4]
     lea                  dst16q, [dst16q+strideq*4]
     dec                    cntd
