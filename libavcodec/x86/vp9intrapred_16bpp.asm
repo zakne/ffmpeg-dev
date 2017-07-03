@@ -901,6 +901,7 @@ cglobal vp9_ipred_dl_32x32_16, 2, 6, 7, dst, stride, l, a
     LOWPASS                  1,  2,  3                 ; RSTUVWXYZ......5
     vperm2i128              m2, m1, m4, q0201          ; Z......555555555
     vperm2i128              m5, m0, m1, q0201          ; JKLMNOPQRSTUVWXY
+    vperm2i128              m6, m2, m2, q0101
     DEFINE_ARGS dst, stride, stride3, dst16, cnt
     lea               stride3q, [strideq*3]
     lea                 dst16q, [dstq+strideq*8]
@@ -911,25 +912,25 @@ cglobal vp9_ipred_dl_32x32_16, 2, 6, 7, dst, stride, l, a
     mova   [dstq+strideq*0 + 0], m0                       ; 0
     mova   [dstq+strideq*0 +32], m1
     mova  [dst16q+strideq*0+ 0], m1                       ; 16
-    mova  [dst16q+strideq*0+32], m2                       ; 16
+    mova  [dst16q+strideq*0+32], m6                       ; 16
     vpalignr                 m3, m5, m0, 2
     vpalignr                 m4, m2, m1, 2
     mova   [dstq+strideq*1 + 0], m3                       ; 1
     mova   [dstq+strideq*1 +32], m4
     mova  [dst16q+strideq*1 +0], m4                       ; 17
-    mova [dst16q+strideq*1 +32], m2                       ; 17
+    mova [dst16q+strideq*1 +32], m6                       ; 17
     vpalignr                 m3, m5, m0, 4
     vpalignr                 m4, m2, m1, 4
     mova   [dstq+strideq*2 + 0], m3                       ; 2
     mova   [dstq+strideq*2 +32], m4
     mova   [dst16q+strideq*2+0], m4                       ; 18
-    mova  [dst16q+strideq*2+32], m2                       ; 18
+    mova  [dst16q+strideq*2+32], m6                       ; 18
     vpalignr                 m3, m5, m0, 6
     vpalignr                 m4, m2, m1, 6  
     mova   [dstq+stride3q*1+ 0], m3                       ; 3
     mova   [dstq+stride3q*1+32], m4                       ; 19
     mova  [dst16q+stride3q*1+0], m4                       ; 19
-    mova [dst16q+stride3q*1+32], m2                       ; 19
+    mova [dst16q+stride3q*1+32], m6                       ; 19
     vpalignr                 m3, m5, m0, 8
     vpalignr                 m4, m2, m1, 8
     lea                    dstq, [dstq+strideq*4]
@@ -937,25 +938,25 @@ cglobal vp9_ipred_dl_32x32_16, 2, 6, 7, dst, stride, l, a
     mova   [dstq+strideq*0 + 0], m3                       ; 4
     mova   [dstq+strideq*0 +32], m4                     
     mova  [dst16q+strideq*0 +0], m4
-    mova [dst16q+strideq*0 +32], m2
+    mova [dst16q+strideq*0 +32], m6
     vpalignr                 m3, m5, m0, 10
     vpalignr                 m4, m2, m1, 10
     mova   [dstq+strideq*1 + 0], m3
     mova   [dstq+strideq*1 +32], m4
     mova  [dst16q+strideq*1 +0], m4
-    mova [dst16q+strideq*1 +32], m2
+    mova [dst16q+strideq*1 +32], m6
     vpalignr                 m3, m5, m0, 12
     vpalignr                 m4, m2, m1, 12
     mova    [dstq+strideq*2+ 0], m3
     mova    [dstq+strideq*2+32], m4
     mova   [dst16q+strideq*2+0], m4
-    mova  [dst16q+strideq*2+32], m2
+    mova  [dst16q+strideq*2+32], m6
     vpalignr                 m3, m5, m0, 14
     vpalignr                 m4, m2, m1, 14
     mova    [dstq+stride3q+  0], m3
     mova    [dstq+stride3q+ 32], m4
     mova   [dst16q+stride3q+ 0], m4
-    mova   [dst16q+stride3q+32], m2
+    mova   [dst16q+stride3q+32], m6
     vpalignr                 m3, m5, m0, 16
     vpalignr                 m4, m2, m1, 16
     vperm2i128               m5, m3, m4, q0201
