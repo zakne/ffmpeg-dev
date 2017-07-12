@@ -84,10 +84,17 @@ typedef struct VP9Block {
     enum BlockPartition bp;
 } VP9Block;
 
+typedef struct VP9TileData {
+    VP56RangeCoder c;
+    unsigned tile_row_start, tile_row_end, tile_col_start, tile_col_end;
+    // offsets
+} VP9TileData;
+
 typedef struct VP9Context {
     VP9SharedContext s;
 
     VP9DSPContext dsp;
+    VP9TileData *t_data;
     VideoDSPContext vdsp;
     GetBitContext gb;
     VP56RangeCoder c;
