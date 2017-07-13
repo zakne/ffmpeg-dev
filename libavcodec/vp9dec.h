@@ -87,6 +87,7 @@ typedef struct VP9Block {
 typedef struct VP9TileData {
     VP56RangeCoder c;
     unsigned tile_row_start, tile_row_end, tile_col_start, tile_col_end;
+    VP9Filter *lflvl;
     // offsets
 } VP9TileData;
 

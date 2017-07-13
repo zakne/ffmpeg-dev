@@ -1098,53 +1098,57 @@ static av_cold int vp9_decode_free(AVCodecContext *avctx)
 }
 
 static av_always_inline
-int vp9_decode_tiles(AVCodecContext *avctx, void *tdata, int jobnr, int threadnr, int pass) {
+int vp9_decode_tiles(AVCodecContext *avctx, void *tdata, int jobnr, int threadnr) {
     VP9Context *s = avctx->priv_data;
     VP9TileData *td = s->t_data[jobnr];
     int row, col;
     
-    for (row = td->tile_row_start; row < s->tile_row_end;
-     row += 8, yoff += ls_y * 64, uvoff += ls_uv * 64 >> s->ss_v) {
-        VP9Filter *lflvl_ptr = s->lflvl;
-        ptrdiff_t yoff2 = yoff, uvoff2 = uvoff;
+    for (tile_row = 0; tile_row < s->s.h.tiling.tile_rows; tile_row++) {
+        for (row = td->tile_row_start; row < s->tile_row_end;
+         row += 8, yoff += ls_y * 64, uvoff += ls_uv * 64 >> s->ss_v) {
+            VP9Filter *lflvl_ptr = td->lflvl;
+            ptrdiff_t yoff2 = yoff, uvoff2 = uvoff;
 
-        for (tile_col = 0; tile_col < s->s.h.tiling.tile_cols; tile_col++) {
-            set_tile_offset(&s->tile_col_start, &s->tile_col_end,
-                            tile_col, s->s.h.tiling.log2_tile_cols, s->sb_cols);
+            for (tile_col = 0; tile_col < s->s.h.tiling.tile_cols; tile_col++) {
+                set_tile_offset(&s->tile_col_start, &s->tile_col_end,
+                                tile_col, s->s.h.tiling.log2_tile_cols, s->sb_cols);
 
-            if (pass != 2) {
-                memset(s->left_partition_ctx, 0, 8);
-                memset(s->left_skip_ctx, 0, 8);
-                if (s->s.h.keyframe || s->s.h.intraonly) {
-                    memset(s->left_mode_ctx, DC_PRED, 16);
-                } else {
-                    memset(s->left_mode_ctx, NEARESTMV, 8);
-                }
-                memset(s->left_y_nnz_ctx, 0, 16);
-                memset(s->left_uv_nnz_ctx, 0, 32);
-                memset(s->left_segpred_ctx, 0, 8);
-            }
-
-            for (col = s->tile_col_start;
-                 col < s->tile_col_end;
-                 col += 8, yoff2 += 64 * bytesperpixel,
-                 uvoff2 += 64 * bytesperpixel >> s->ss_h, lflvl_ptr++) {
-                // FIXME integrate with lf code (i.e. zero after each
-                // use, similar to invtxfm coefficients, or similar)
-                if (s->pass != 1) {
-                    memset(lflvl_ptr->mask, 0, sizeof(lflvl_ptr->mask));
+                if (s->pass != 2) {
+                    memset(s->left_partition_ctx, 0, 8);
+                    memset(s->left_skip_ctx, 0, 8);
+                    if (s->s.h.keyframe || s->s.h.intraonly) {
+                        memset(s->left_mode_ctx, DC_PRED, 16);
+                    } else {
+                        memset(s->left_mode_ctx, NEARESTMV, 8);
+                    }
+                    memset(s->left_y_nnz_ctx, 0, 16);
+                    memset(s->left_uv_nnz_ctx, 0, 32);
+                    memset(s->left_segpred_ctx, 0, 8);
+                    
+                    memcpy(&s->c, &td->c, sizeof(s->c));
                 }
 
-                if (pass == 2) {
-                    decode_sb_mem(avctx, row, col, lflvl_ptr,
+                for (col = td->tile_col_start;
+                     col < td->tile_col_end;
+                     col += 8, yoff2 += 64 * bytesperpixel,
+                     uvoff2 += 64 * bytesperpixel >> s->ss_h, lflvl_ptr++) {
+                    // FIXME integrate with lf code (i.e. zero after each
+                    // use, similar to invtxfm coefficients, or similar)
+                    if (s->pass != 1) {
+                        memset(lflvl_ptr->mask, 0, sizeof(lflvl_ptr->mask));
+                    }
+
+                    if (s->pass == 2) {
+                        decode_sb_mem(avctx, row, col, lflvl_ptr,
+                                      yoff2, uvoff2, BL_64X64);
+                    } else {
+                        decode_sb(avctx, row, col, lflvl_ptr,
                                   yoff2, uvoff2, BL_64X64);
-                } else {
-                    decode_sb(avctx, row, col, lflvl_ptr,
-                              yoff2, uvoff2, BL_64X64);
+                    }
                 }
+                if (s->pass != 2)
+                    memcpy(&td->c, &s->c, sizeof(s->c));
             }
-            /*if (s->pass != 2)
-                memcpy(&s->c_b[tile_col], &s->c, sizeof(s->c)); */
         }
     }
 }
@@ -1305,7 +1309,7 @@ FF_ENABLE_DEPRECATION_WARNINGS
                     set_tile_offset(&s->tile_col_start, &s->tile_col_end,
                                     tile_col, s->s.h.tiling.log2_tile_cols, s->sb_cols);
                     int64_t tile_size;
-
+    
                     if (tile_col == s->s.h.tiling.tile_cols - 1 &&
                         tile_row == s->s.h.tiling.tile_rows - 1) {
                         tile_size = size; // last tile
@@ -1325,6 +1329,10 @@ FF_ENABLE_DEPRECATION_WARNINGS
                         ff_thread_report_progress(&s->s.frames[CUR_FRAME].tf, INT_MAX, 0);
                         return AVERROR_INVALIDDATA;
                     }
+                    
+                    memcpy(&s->t_data[t_cnt].lflvl, lflvl_ptr, sizeof(lflvl_ptr));
+                    for (col = s->tile_col_start; col < s->tile_col_end; col += 8, lflvl_ptr++);
+                    
                     s->t_data[t_cnt].tile_row_start = tile_row_start;
                     s->t_data[t_cnt].tile_row_end = tile_row_end;
                     s->t_data[t_cnt].tile_col_start = tile_col_start;
