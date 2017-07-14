@@ -663,12 +663,12 @@ static int decode_frame_header(AVCodecContext *avctx,
     s->s.h.tiling.tile_rows = 1 << s->s.h.tiling.log2_tile_rows;
     if (s->s.h.tiling.tile_cols != (1 << s->s.h.tiling.log2_tile_cols)) {
         s->s.h.tiling.tile_cols = 1 << s->s.h.tiling.log2_tile_cols;
-        s->c_b = av_fast_realloc(s->c_b, &s->c_b_size,
+        /*s->c_b = av_fast_realloc(s->c_b, &s->c_b_size,
                                  sizeof(VP56RangeCoder) * s->s.h.tiling.tile_cols);
         if (!s->c_b) {
             av_log(avctx, AV_LOG_ERROR, "Ran out of memory during range coder init\n");
             return AVERROR(ENOMEM);
-        }
+        }*/
     }
 
     /* check reference frames */
@@ -929,12 +929,12 @@ static int decode_frame_header(AVCodecContext *avctx,
     return (data2 - data) + size2;
 }
 
-static void decode_sb(AVCodecContext *avctx, int row, int col, VP9Filter *lflvl,
+static void decode_sb(VP9TileData *td, int row, int col, VP9Filter *lflvl,
                       ptrdiff_t yoff, ptrdiff_t uvoff, enum BlockLevel bl)
 {
-    VP9Context *s = avctx->priv_data;
+    VP9Context *s = td->s;
     int c = ((s->above_partition_ctx[col] >> (3 - bl)) & 1) |
-            (((s->left_partition_ctx[row & 0x7] >> (3 - bl)) & 1) << 1);
+            (((td->left_partition_ctx[row & 0x7] >> (3 - bl)) & 1) << 1);
     const uint8_t *p = s->s.h.keyframe || s->s.h.intraonly ? ff_vp9_default_kf_partition_probs[bl][c] :
                                                      s->prob.p.partition[bl][c];
     enum BlockPartition bp;
@@ -944,74 +944,74 @@ static void decode_sb(AVCodecContext *avctx, int row, int col, VP9Filter *lflvl,
     int bytesperpixel = s->bytesperpixel;
 
     if (bl == BL_8X8) {
-        bp = vp8_rac_get_tree(&s->c, ff_vp9_partition_tree, p);
-        ff_vp9_decode_block(avctx, row, col, lflvl, yoff, uvoff, bl, bp);
+        bp = vp8_rac_get_tree(&td->c, ff_vp9_partition_tree, p);
+        ff_vp9_decode_block(td, row, col, lflvl, yoff, uvoff, bl, bp);
     } else if (col + hbs < s->cols) { // FIXME why not <=?
         if (row + hbs < s->rows) { // FIXME why not <=?
-            bp = vp8_rac_get_tree(&s->c, ff_vp9_partition_tree, p);
+            bp = vp8_rac_get_tree(&td->c, ff_vp9_partition_tree, p);
             switch (bp) {
             case PARTITION_NONE:
-                ff_vp9_decode_block(avctx, row, col, lflvl, yoff, uvoff, bl, bp);
+                ff_vp9_decode_block(td, row, col, lflvl, yoff, uvoff, bl, bp);
                 break;
             case PARTITION_H:
-                ff_vp9_decode_block(avctx, row, col, lflvl, yoff, uvoff, bl, bp);
+                ff_vp9_decode_block(td, row, col, lflvl, yoff, uvoff, bl, bp);
                 yoff  += hbs * 8 * y_stride;
                 uvoff += hbs * 8 * uv_stride >> s->ss_v;
-                ff_vp9_decode_block(avctx, row + hbs, col, lflvl, yoff, uvoff, bl, bp);
+                ff_vp9_decode_block(td, row + hbs, col, lflvl, yoff, uvoff, bl, bp);
                 break;
             case PARTITION_V:
-                ff_vp9_decode_block(avctx, row, col, lflvl, yoff, uvoff, bl, bp);
+                ff_vp9_decode_block(td, row, col, lflvl, yoff, uvoff, bl, bp);
                 yoff  += hbs * 8 * bytesperpixel;
                 uvoff += hbs * 8 * bytesperpixel >> s->ss_h;
-                ff_vp9_decode_block(avctx, row, col + hbs, lflvl, yoff, uvoff, bl, bp);
+                ff_vp9_decode_block(td, row, col + hbs, lflvl, yoff, uvoff, bl, bp);
                 break;
             case PARTITION_SPLIT:
-                decode_sb(avctx, row, col, lflvl, yoff, uvoff, bl + 1);
-                decode_sb(avctx, row, col + hbs, lflvl,
+                decode_sb(td, row, col, lflvl, yoff, uvoff, bl + 1);
+                decode_sb(td, row, col + hbs, lflvl,
                           yoff + 8 * hbs * bytesperpixel,
                           uvoff + (8 * hbs * bytesperpixel >> s->ss_h), bl + 1);
                 yoff  += hbs * 8 * y_stride;
                 uvoff += hbs * 8 * uv_stride >> s->ss_v;
-                decode_sb(avctx, row + hbs, col, lflvl, yoff, uvoff, bl + 1);
-                decode_sb(avctx, row + hbs, col + hbs, lflvl,
+                decode_sb(td, row + hbs, col, lflvl, yoff, uvoff, bl + 1);
+                decode_sb(td, row + hbs, col + hbs, lflvl,
                           yoff + 8 * hbs * bytesperpixel,
                           uvoff + (8 * hbs * bytesperpixel >> s->ss_h), bl + 1);
                 break;
             default:
                 av_assert0(0);
             }
-        } else if (vp56_rac_get_prob_branchy(&s->c, p[1])) {
+        } else if (vp56_rac_get_prob_branchy(&td->c, p[1])) {
             bp = PARTITION_SPLIT;
-            decode_sb(avctx, row, col, lflvl, yoff, uvoff, bl + 1);
-            decode_sb(avctx, row, col + hbs, lflvl,
+            decode_sb(td, row, col, lflvl, yoff, uvoff, bl + 1);
+            decode_sb(td, row, col + hbs, lflvl,
                       yoff + 8 * hbs * bytesperpixel,
                       uvoff + (8 * hbs * bytesperpixel >> s->ss_h), bl + 1);
         } else {
             bp = PARTITION_H;
-            ff_vp9_decode_block(avctx, row, col, lflvl, yoff, uvoff, bl, bp);
+            ff_vp9_decode_block(td, row, col, lflvl, yoff, uvoff, bl, bp);
         }
     } else if (row + hbs < s->rows) { // FIXME why not <=?
-        if (vp56_rac_get_prob_branchy(&s->c, p[2])) {
+        if (vp56_rac_get_prob_branchy(&td->c, p[2])) {
             bp = PARTITION_SPLIT;
-            decode_sb(avctx, row, col, lflvl, yoff, uvoff, bl + 1);
+            decode_sb(td, row, col, lflvl, yoff, uvoff, bl + 1);
             yoff  += hbs * 8 * y_stride;
             uvoff += hbs * 8 * uv_stride >> s->ss_v;
-            decode_sb(avctx, row + hbs, col, lflvl, yoff, uvoff, bl + 1);
+            decode_sb(td, row + hbs, col, lflvl, yoff, uvoff, bl + 1);
         } else {
             bp = PARTITION_V;
-            ff_vp9_decode_block(avctx, row, col, lflvl, yoff, uvoff, bl, bp);
+            ff_vp9_decode_block(td, row, col, lflvl, yoff, uvoff, bl, bp);
         }
     } else {
         bp = PARTITION_SPLIT;
-        decode_sb(avctx, row, col, lflvl, yoff, uvoff, bl + 1);
+        decode_sb(td, row, col, lflvl, yoff, uvoff, bl + 1);
     }
     s->counts.partition[bl][c][bp]++;
 }
 
-static void decode_sb_mem(AVCodecContext *avctx, int row, int col, VP9Filter *lflvl,
+static void decode_sb_mem(VP9TileData *td, int row, int col, VP9Filter *lflvl,
                           ptrdiff_t yoff, ptrdiff_t uvoff, enum BlockLevel bl)
 {
-    VP9Context *s = avctx->priv_data;
+    VP9Context *s = td->s;
     VP9Block *b = s->b;
     ptrdiff_t hbs = 4 >> bl;
     AVFrame *f = s->s.frames[CUR_FRAME].tf.f;
@@ -1020,39 +1020,39 @@ static void decode_sb_mem(AVCodecContext *avctx, int row, int col, VP9Filter *lf
 
     if (bl == BL_8X8) {
         av_assert2(b->bl == BL_8X8);
-        ff_vp9_decode_block(avctx, row, col, lflvl, yoff, uvoff, b->bl, b->bp);
+        ff_vp9_decode_block(td, row, col, lflvl, yoff, uvoff, b->bl, b->bp);
     } else if (s->b->bl == bl) {
-        ff_vp9_decode_block(avctx, row, col, lflvl, yoff, uvoff, b->bl, b->bp);
+        ff_vp9_decode_block(td, row, col, lflvl, yoff, uvoff, b->bl, b->bp);
         if (b->bp == PARTITION_H && row + hbs < s->rows) {
             yoff  += hbs * 8 * y_stride;
             uvoff += hbs * 8 * uv_stride >> s->ss_v;
-            ff_vp9_decode_block(avctx, row + hbs, col, lflvl, yoff, uvoff, b->bl, b->bp);
+            ff_vp9_decode_block(td, row + hbs, col, lflvl, yoff, uvoff, b->bl, b->bp);
         } else if (b->bp == PARTITION_V && col + hbs < s->cols) {
             yoff  += hbs * 8 * bytesperpixel;
             uvoff += hbs * 8 * bytesperpixel >> s->ss_h;
-            ff_vp9_decode_block(avctx, row, col + hbs, lflvl, yoff, uvoff, b->bl, b->bp);
+            ff_vp9_decode_block(td, row, col + hbs, lflvl, yoff, uvoff, b->bl, b->bp);
         }
     } else {
-        decode_sb_mem(avctx, row, col, lflvl, yoff, uvoff, bl + 1);
+        decode_sb_mem(td, row, col, lflvl, yoff, uvoff, bl + 1);
         if (col + hbs < s->cols) { // FIXME why not <=?
             if (row + hbs < s->rows) {
-                decode_sb_mem(avctx, row, col + hbs, lflvl, yoff + 8 * hbs * bytesperpixel,
+                decode_sb_mem(td, row, col + hbs, lflvl, yoff + 8 * hbs * bytesperpixel,
                               uvoff + (8 * hbs * bytesperpixel >> s->ss_h), bl + 1);
                 yoff  += hbs * 8 * y_stride;
                 uvoff += hbs * 8 * uv_stride >> s->ss_v;
-                decode_sb_mem(avctx, row + hbs, col, lflvl, yoff, uvoff, bl + 1);
-                decode_sb_mem(avctx, row + hbs, col + hbs, lflvl,
+                decode_sb_mem(td, row + hbs, col, lflvl, yoff, uvoff, bl + 1);
+                decode_sb_mem(td, row + hbs, col + hbs, lflvl,
                               yoff + 8 * hbs * bytesperpixel,
                               uvoff + (8 * hbs * bytesperpixel >> s->ss_h), bl + 1);
             } else {
                 yoff  += hbs * 8 * bytesperpixel;
                 uvoff += hbs * 8 * bytesperpixel >> s->ss_h;
-                decode_sb_mem(avctx, row, col + hbs, lflvl, yoff, uvoff, bl + 1);
+                decode_sb_mem(td, row, col + hbs, lflvl, yoff, uvoff, bl + 1);
             }
         } else if (row + hbs < s->rows) {
             yoff  += hbs * 8 * y_stride;
             uvoff += hbs * 8 * uv_stride >> s->ss_v;
-            decode_sb_mem(avctx, row + hbs, col, lflvl, yoff, uvoff, bl + 1);
+            decode_sb_mem(td, row + hbs, col, lflvl, yoff, uvoff, bl + 1);
         }
     }
 }
@@ -1103,53 +1103,46 @@ int vp9_decode_tiles(AVCodecContext *avctx, void *tdata, int jobnr, int threadnr
     VP9TileData *td = s->t_data[jobnr];
     int row, col;
     
-    for (tile_row = 0; tile_row < s->s.h.tiling.tile_rows; tile_row++) {
-        for (row = td->tile_row_start; row < s->tile_row_end;
-         row += 8, yoff += ls_y * 64, uvoff += ls_uv * 64 >> s->ss_v) {
-            VP9Filter *lflvl_ptr = td->lflvl;
-            ptrdiff_t yoff2 = yoff, uvoff2 = uvoff;
+    for (row = td->tile_row_start; row < td->tile_row_end;
+     row += 8, yoff += ls_y * 64, uvoff += ls_uv * 64 >> s->ss_v) {
+        VP9Filter *lflvl_ptr = td->lflvl_ptr;
+        ptrdiff_t yoff2 = yoff, uvoff2 = uvoff;
+        
+        if (s->pass != 2) {
+            memset(td->left_partition_ctx, 0, 8);
+            memset(td->left_skip_ctx, 0, 8);
+            if (s->s.h.keyframe || s->s.h.intraonly) {
+                memset(td->left_mode_ctx, DC_PRED, 16);
+            } else {
+                memset(td->left_mode_ctx, NEARESTMV, 8);
+            }
+            memset(td->left_y_nnz_ctx, 0, 16);
+            memset(td->left_uv_nnz_ctx, 0, 32);
+            memset(td->left_segpred_ctx, 0, 8);
+            
+            //memcpy(&s->c, &td->c, sizeof(s->c));
+        }
 
-            for (tile_col = 0; tile_col < s->s.h.tiling.tile_cols; tile_col++) {
-                set_tile_offset(&s->tile_col_start, &s->tile_col_end,
-                                tile_col, s->s.h.tiling.log2_tile_cols, s->sb_cols);
+        for (col = td->tile_col_start;
+             col < td->tile_col_end;
+             col += 8, yoff2 += 64 * bytesperpixel,
+             uvoff2 += 64 * bytesperpixel >> s->ss_h, lflvl_ptr++) {
+            // FIXME integrate with lf code (i.e. zero after each
+            // use, similar to invtxfm coefficients, or similar)
+            if (s->pass != 1) {
+                memset(lflvl_ptr->mask, 0, sizeof(lflvl_ptr->mask));
+            }
 
-                if (s->pass != 2) {
-                    memset(s->left_partition_ctx, 0, 8);
-                    memset(s->left_skip_ctx, 0, 8);
-                    if (s->s.h.keyframe || s->s.h.intraonly) {
-                        memset(s->left_mode_ctx, DC_PRED, 16);
-                    } else {
-                        memset(s->left_mode_ctx, NEARESTMV, 8);
-                    }
-                    memset(s->left_y_nnz_ctx, 0, 16);
-                    memset(s->left_uv_nnz_ctx, 0, 32);
-                    memset(s->left_segpred_ctx, 0, 8);
-                    
-                    memcpy(&s->c, &td->c, sizeof(s->c));
-                }
-
-                for (col = td->tile_col_start;
-                     col < td->tile_col_end;
-                     col += 8, yoff2 += 64 * bytesperpixel,
-                     uvoff2 += 64 * bytesperpixel >> s->ss_h, lflvl_ptr++) {
-                    // FIXME integrate with lf code (i.e. zero after each
-                    // use, similar to invtxfm coefficients, or similar)
-                    if (s->pass != 1) {
-                        memset(lflvl_ptr->mask, 0, sizeof(lflvl_ptr->mask));
-                    }
-
-                    if (s->pass == 2) {
-                        decode_sb_mem(avctx, row, col, lflvl_ptr,
-                                      yoff2, uvoff2, BL_64X64);
-                    } else {
-                        decode_sb(avctx, row, col, lflvl_ptr,
-                                  yoff2, uvoff2, BL_64X64);
-                    }
-                }
-                if (s->pass != 2)
-                    memcpy(&td->c, &s->c, sizeof(s->c));
+            if (s->pass == 2) {
+                decode_sb_mem(avctx, row, col, lflvl_ptr,
+                              yoff2, uvoff2, BL_64X64);
+            } else {
+                decode_sb(avctx, row, col, lflvl_ptr,
+                          yoff2, uvoff2, BL_64X64);
             }
         }
+        //if (s->pass != 2)
+          //  memcpy(&td->c, &s->c, sizeof(s->c));
     }
 }
 
@@ -1289,7 +1282,6 @@ FF_ENABLE_DEPRECATION_WARNINGS
     }
     
     s->t_data = av_mallocz(s->s.h.tiling.tile_rows*s->s.h.tiling.tile_cols*sizeof(VP9TileData));
-    
     do { // s->pass == 0, so this loop runs one time for tile threading
         yoff = uvoff = 0;
         s->b = s->b_base;
@@ -1304,6 +1296,8 @@ FF_ENABLE_DEPRECATION_WARNINGS
         for (tile_row = 0; tile_row < s->s.h.tiling.tile_rows; tile_row++) {
             set_tile_offset(&s->tile_row_start, &s->tile_row_end,
                             tile_row, s->s.h.tiling.log2_tile_rows, s->sb_rows);
+            VP9Filter *lflvl_ptr = s->lflvl;
+            
             if (s->pass != 2) {
                 for (tile_col = 0; tile_col < s->s.h.tiling.tile_cols; tile_col++) {
                     set_tile_offset(&s->tile_col_start, &s->tile_col_end,
@@ -1330,13 +1324,14 @@ FF_ENABLE_DEPRECATION_WARNINGS
                         return AVERROR_INVALIDDATA;
                     }
                     
-                    memcpy(&s->t_data[t_cnt].lflvl, lflvl_ptr, sizeof(lflvl_ptr));
+                    s->t_data[t_cnt].lflvl_ptr = lflvl_ptr;
                     for (col = s->tile_col_start; col < s->tile_col_end; col += 8, lflvl_ptr++);
                     
                     s->t_data[t_cnt].tile_row_start = tile_row_start;
                     s->t_data[t_cnt].tile_row_end = tile_row_end;
                     s->t_data[t_cnt].tile_col_start = tile_col_start;
                     s->t_data[t_cnt].tile_col_end = tile_col_end;
+                    s->t_data[t_cnt].s = s;
                     data += tile_size;
                     size -= tile_size;
                     t_cnt++

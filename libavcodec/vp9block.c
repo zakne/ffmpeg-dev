@@ -77,7 +77,7 @@ static av_always_inline void setctx_2d(uint8_t *ptr, int w, int h,
     }
 }
 
-static void decode_mode(AVCodecContext *avctx)
+static void decode_mode(VP9TileData *td)
 {
     static const uint8_t left_ctx[N_BS_SIZES] = {
         0x0, 0x8, 0x0, 0x8, 0xc, 0x8, 0xc, 0xe, 0xc, 0xe, 0xf, 0xe, 0xf
@@ -89,7 +89,7 @@ static void decode_mode(AVCodecContext *avctx)
         TX_32X32, TX_32X32, TX_32X32, TX_32X32, TX_16X16, TX_16X16,
         TX_16X16, TX_8X8,   TX_8X8,   TX_8X8,   TX_4X4,   TX_4X4,  TX_4X4
     };
-    VP9Context *s = avctx->priv_data;
+    VP9Context *s = td->s;
     VP9Block *b = s->b;
     int row = s->row, col = s->col, row7 = s->row7;
     enum TxfmMode max_tx = max_tx_for_bl_bp[b->bs];
@@ -925,49 +925,49 @@ skip_eob:
     return i;
 }
 
-static int decode_coeffs_b_8bpp(VP9Context *s, int16_t *coef, int n_coeffs,
+static int decode_coeffs_b_8bpp(VP9TileData *td, int16_t *coef, int n_coeffs,
                                 unsigned (*cnt)[6][3], unsigned (*eob)[6][2],
                                 uint8_t (*p)[6][11], int nnz, const int16_t *scan,
                                 const int16_t (*nb)[2], const int16_t *band_counts,
                                 const int16_t *qmul)
 {
-    return decode_coeffs_b_generic(&s->c, coef, n_coeffs, 0, 1, 8, cnt, eob, p,
+    return decode_coeffs_b_generic(&td->c, coef, n_coeffs, 0, 1, 8, cnt, eob, p,
                                    nnz, scan, nb, band_counts, qmul);
 }
 
-static int decode_coeffs_b32_8bpp(VP9Context *s, int16_t *coef, int n_coeffs,
+static int decode_coeffs_b32_8bpp(VP9TileData *td, int16_t *coef, int n_coeffs,
                                   unsigned (*cnt)[6][3], unsigned (*eob)[6][2],
                                   uint8_t (*p)[6][11], int nnz, const int16_t *scan,
                                   const int16_t (*nb)[2], const int16_t *band_counts,
                                   const int16_t *qmul)
 {
-    return decode_coeffs_b_generic(&s->c, coef, n_coeffs, 1, 1, 8, cnt, eob, p,
+    return decode_coeffs_b_generic(&td->c, coef, n_coeffs, 1, 1, 8, cnt, eob, p,
                                    nnz, scan, nb, band_counts, qmul);
 }
 
-static int decode_coeffs_b_16bpp(VP9Context *s, int16_t *coef, int n_coeffs,
+static int decode_coeffs_b_16bpp(VP9TileData *td, int16_t *coef, int n_coeffs,
                                  unsigned (*cnt)[6][3], unsigned (*eob)[6][2],
                                  uint8_t (*p)[6][11], int nnz, const int16_t *scan,
                                  const int16_t (*nb)[2], const int16_t *band_counts,
                                  const int16_t *qmul)
 {
-    return decode_coeffs_b_generic(&s->c, coef, n_coeffs, 0, 0, s->s.h.bpp, cnt, eob, p,
+    return decode_coeffs_b_generic(&td->c, coef, n_coeffs, 0, 0, s->s.h.bpp, cnt, eob, p,
                                    nnz, scan, nb, band_counts, qmul);
 }
 
-static int decode_coeffs_b32_16bpp(VP9Context *s, int16_t *coef, int n_coeffs,
+static int decode_coeffs_b32_16bpp(VP9TileData *td, int16_t *coef, int n_coeffs,
                                    unsigned (*cnt)[6][3], unsigned (*eob)[6][2],
                                    uint8_t (*p)[6][11], int nnz, const int16_t *scan,
                                    const int16_t (*nb)[2], const int16_t *band_counts,
                                    const int16_t *qmul)
 {
-    return decode_coeffs_b_generic(&s->c, coef, n_coeffs, 1, 0, s->s.h.bpp, cnt, eob, p,
+    return decode_coeffs_b_generic(&td->c, coef, n_coeffs, 1, 0, s->s.h.bpp, cnt, eob, p,
                                    nnz, scan, nb, band_counts, qmul);
 }
 
-static av_always_inline int decode_coeffs(AVCodecContext *avctx, int is8bitsperpixel)
+static av_always_inline int decode_coeffs(VP9TileData *td, int is8bitsperpixel)
 {
-    VP9Context *s = avctx->priv_data;
+    VP9Context *s = td->s;
     VP9Block *b = s->b;
     int row = s->row, col = s->col;
     uint8_t (*p)[6][11] = s->prob.coef[b->tx][0 /* y */][!b->intra];
@@ -1264,11 +1264,11 @@ static av_always_inline void mask_edges(uint8_t (*mask)[8][4], int ss_h, int ss_
     }
 }
 
-void ff_vp9_decode_block(AVCodecContext *avctx, int row, int col,
+void ff_vp9_decode_block(VP9TileData *td, int row, int col,
                          VP9Filter *lflvl, ptrdiff_t yoff, ptrdiff_t uvoff,
                          enum BlockLevel bl, enum BlockPartition bp)
 {
-    VP9Context *s = avctx->priv_data;
+    VP9Context *s = td->s;
     VP9Block *b = s->b;
     enum BlockSize bs = bl * 3 + bp;
     int bytesperpixel = s->bytesperpixel;
@@ -1290,7 +1290,7 @@ void ff_vp9_decode_block(AVCodecContext *avctx, int row, int col,
         b->bs = bs;
         b->bl = bl;
         b->bp = bp;
-        decode_mode(avctx);
+        decode_mode(td);
         b->uvtx = b->tx - ((s->ss_h && w4 * 2 == (1 << b->tx)) ||
                            (s->ss_v && h4 * 2 == (1 << b->tx)));
 
@@ -1298,9 +1298,9 @@ void ff_vp9_decode_block(AVCodecContext *avctx, int row, int col,
             int has_coeffs;
 
             if (bytesperpixel == 1) {
-                has_coeffs = decode_coeffs_8bpp(avctx);
+                has_coeffs = decode_coeffs_8bpp(td);
             } else {
-                has_coeffs = decode_coeffs_16bpp(avctx);
+                has_coeffs = decode_coeffs_16bpp(td);
             }
             if (!has_coeffs && b->bs <= BS_8x8 && !b->intra) {
                 b->skip = 1;
@@ -1382,15 +1382,15 @@ void ff_vp9_decode_block(AVCodecContext *avctx, int row, int col,
     }
     if (b->intra) {
         if (s->s.h.bpp > 8) {
-            ff_vp9_intra_recon_16bpp(avctx, yoff, uvoff);
+            ff_vp9_intra_recon_16bpp(td, yoff, uvoff);
         } else {
-            ff_vp9_intra_recon_8bpp(avctx, yoff, uvoff);
+            ff_vp9_intra_recon_8bpp(td, yoff, uvoff);
         }
     } else {
         if (s->s.h.bpp > 8) {
-            ff_vp9_inter_recon_16bpp(avctx);
+            ff_vp9_inter_recon_16bpp(td);
         } else {
-            ff_vp9_inter_recon_8bpp(avctx);
+            ff_vp9_inter_recon_8bpp(td);
         }
     }
     if (emu[0]) {

@@ -87,8 +87,15 @@ typedef struct VP9Block {
 typedef struct VP9TileData {
     VP56RangeCoder c;
     unsigned tile_row_start, tile_row_end, tile_col_start, tile_col_end;
-    VP9Filter *lflvl;
-    // offsets
+    VP9Filter *lflvl_ptr;
+    VP9Context *s;
+    
+    DECLARE_ALIGNED(8, uint8_t, left_segpred_ctx)[8];
+    DECLARE_ALIGNED(16, uint8_t, left_y_nnz_ctx)[16];
+    DECLARE_ALIGNED(16, uint8_t, left_mode_ctx)[16];
+    DECLARE_ALIGNED(8, uint8_t, left_skip_ctx)[8];
+    DECLARE_ALIGNED(8, uint8_t, left_partition_ctx)[8];
+    DECLARE_ALIGNED(16, uint8_t, left_uv_nnz_ctx)[2][16];
 } VP9TileData;
 
 typedef struct VP9Context {
@@ -99,7 +106,6 @@ typedef struct VP9Context {
     VideoDSPContext vdsp;
     GetBitContext gb;
     VP56RangeCoder c;
-    VP56RangeCoder *c_b;
     unsigned c_b_size;
     VP9Block *b_base, *b;
     int pass;
@@ -123,7 +129,6 @@ typedef struct VP9Context {
         uint8_t lim_lut[64];
         uint8_t mblim_lut[64];
     } filter_lut;
-    unsigned tile_row_start, tile_row_end, tile_col_start, tile_col_end;
     struct {
         ProbContext p;
         uint8_t coef[4][2][2][6][6][3];
@@ -162,14 +167,8 @@ typedef struct VP9Context {
     } counts;
 
     // contextual (left/above) cache
-    DECLARE_ALIGNED(16, uint8_t, left_y_nnz_ctx)[16];
-    DECLARE_ALIGNED(16, uint8_t, left_mode_ctx)[16];
     DECLARE_ALIGNED(16, VP56mv, left_mv_ctx)[16][2];
-    DECLARE_ALIGNED(16, uint8_t, left_uv_nnz_ctx)[2][16];
-    DECLARE_ALIGNED(8, uint8_t, left_partition_ctx)[8];
-    DECLARE_ALIGNED(8, uint8_t, left_skip_ctx)[8];
     DECLARE_ALIGNED(8, uint8_t, left_txfm_ctx)[8];
-    DECLARE_ALIGNED(8, uint8_t, left_segpred_ctx)[8];
     DECLARE_ALIGNED(8, uint8_t, left_intra_ctx)[8];
     DECLARE_ALIGNED(8, uint8_t, left_comp_ctx)[8];
     DECLARE_ALIGNED(8, uint8_t, left_ref_ctx)[8];
