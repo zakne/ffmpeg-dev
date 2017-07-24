@@ -84,46 +84,24 @@ typedef struct VP9Block {
     enum BlockPartition bp;
 } VP9Block;
 
-typedef struct VP9Context {
-    VP9SharedContext s;
-
-    VP9DSPContext dsp;
-    VideoDSPContext vdsp;
-    GetBitContext gb;
+typedef struct VP9TileData {
+    VP9Context *s;
     VP56RangeCoder c;
     VP56RangeCoder *c_b;
-    unsigned c_b_size;
-    VP9Block *b_base, *b;
-    int pass;
-    int row, row7, col, col7;
-    uint8_t *dst[3];
     ptrdiff_t y_stride, uv_stride;
-
-    uint8_t ss_h, ss_v;
-    uint8_t last_bpp, bpp_index, bytesperpixel;
-    uint8_t last_keyframe;
-    // sb_cols/rows, rows/cols and last_fmt are used for allocating all internal
-    // arrays, and are thus per-thread. w/h and gf_fmt are synced between threads
-    // and are therefore per-stream. pix_fmt represents the value in the header
-    // of the currently processed frame.
-    int w, h;
-    enum AVPixelFormat pix_fmt, last_fmt, gf_fmt;
-    unsigned sb_cols, sb_rows, rows, cols;
-    ThreadFrame next_refs[8];
-
+    unsigned tile_row_start, tile_row_end, tile_col_start, tile_col_end;
+    int t_row_start, t_row_end, t_col_start, t_col_end;
+    int row, row7, col, col7;
+    VP9Block *b;
+    struct { int x, y; } min_mv, max_mv;
+    uint8_t *eob, *uveob[2];
     struct {
         uint8_t lim_lut[64];
         uint8_t mblim_lut[64];
     } filter_lut;
-    unsigned tile_row_start, tile_row_end, tile_col_start, tile_col_end;
-    struct {
-        ProbContext p;
-        uint8_t coef[4][2][2][6][6][3];
-    } prob_ctx[4];
-    struct {
-        ProbContext p;
-        uint8_t coef[4][2][2][6][6][11];
-    } prob;
+    int16_t *block, *uvblock[2];
+    uint8_t *dst[3];
+    
     struct {
         unsigned y_mode[4][10];
         unsigned uv_mode[10][10];
@@ -152,33 +130,120 @@ typedef struct VP9Context {
         unsigned coef[4][2][2][6][6][3];
         unsigned eob[4][2][2][6][6][2];
     } counts;
-
-    // contextual (left/above) cache
-    DECLARE_ALIGNED(16, uint8_t, left_y_nnz_ctx)[16];
-    DECLARE_ALIGNED(16, uint8_t, left_mode_ctx)[16];
-    DECLARE_ALIGNED(16, VP56mv, left_mv_ctx)[16][2];
-    DECLARE_ALIGNED(16, uint8_t, left_uv_nnz_ctx)[2][16];
+    
     DECLARE_ALIGNED(8, uint8_t, left_partition_ctx)[8];
     DECLARE_ALIGNED(8, uint8_t, left_skip_ctx)[8];
-    DECLARE_ALIGNED(8, uint8_t, left_txfm_ctx)[8];
+    DECLARE_ALIGNED(16, uint8_t, left_mode_ctx)[16];
+    DECLARE_ALIGNED(16, uint8_t, left_uv_nnz_ctx)[2][16];
+    DECLARE_ALIGNED(16, uint8_t, left_y_nnz_ctx)[16];
     DECLARE_ALIGNED(8, uint8_t, left_segpred_ctx)[8];
+    DECLARE_ALIGNED(16, VP56mv, left_mv_ctx)[16][2];
+    
+    uint8_t *above_y_nnz_ctx;
+    uint8_t *above_uv_nnz_ctx[2];
+    uint8_t *above_segpred_ctx;
+    uint8_t *above_skip_ctx;
+    uint8_t *above_mode_ctx;
+    VP56mv (*above_mv_ctx)[2];
+} VP9TileData;
+
+typedef struct VP9Context {
+    VP9SharedContext s;
+
+    VP9DSPContext dsp;
+    VideoDSPContext vdsp;
+    GetBitContext gb;
+    VP9TileData *td;
+    VP56RangeCoder c;
+    VP56RangeCoder *c_b; // moved to TileData
+    unsigned c_b_size;
+    VP9Block *b_base; //, *b; moved to TileData
+    int pass;
+    //int row, row7, col, col7; // moved to TileData
+    //uint8_t *dst[3]; Moved to TileData
+    //ptrdiff_t y_stride, uv_stride; // moved to TileData
+
+    uint8_t ss_h, ss_v;
+    uint8_t last_bpp, bpp_index, bytesperpixel;
+    uint8_t last_keyframe;
+    // sb_cols/rows, rows/cols and last_fmt are used for allocating all internal
+    // arrays, and are thus per-thread. w/h and gf_fmt are synced between threads
+    // and are therefore per-stream. pix_fmt represents the value in the header
+    // of the currently processed frame.
+    int w, h;
+    enum AVPixelFormat pix_fmt, last_fmt, gf_fmt;
+    unsigned sb_cols, sb_rows, rows, cols;
+    ThreadFrame next_refs[8];
+    /*
+    struct {
+        uint8_t lim_lut[64];
+        uint8_t mblim_lut[64];
+    } filter_lut; moved to TileData*/
+    //unsigned tile_row_start, tile_row_end, tile_col_start, tile_col_end; //moved to TileData
+    struct {
+        ProbContext p;
+        uint8_t coef[4][2][2][6][6][3];
+    } prob_ctx[4];
+    struct {
+        ProbContext p;
+        uint8_t coef[4][2][2][6][6][11];
+    } prob;
+    /*
+    struct {
+        unsigned y_mode[4][10];
+        unsigned uv_mode[10][10];
+        unsigned filter[4][3];
+        unsigned mv_mode[7][4];
+        unsigned intra[4][2];
+        unsigned comp[5][2];
+        unsigned single_ref[5][2][2];
+        unsigned comp_ref[5][2];
+        unsigned tx32p[2][4];
+        unsigned tx16p[2][3];
+        unsigned tx8p[2][2];
+        unsigned skip[3][2];
+        unsigned mv_joint[4];
+        struct {
+            unsigned sign[2];
+            unsigned classes[11];
+            unsigned class0[2];
+            unsigned bits[10][2];
+            unsigned class0_fp[2][4];
+            unsigned fp[4];
+            unsigned class0_hp[2];
+            unsigned hp[2];
+        } mv_comp[2];
+        unsigned partition[4][4][4];
+        unsigned coef[4][2][2][6][6][3];
+        unsigned eob[4][2][2][6][6][2];
+    } counts;  Moved to TileData*/
+
+    // contextual (left/above) cache
+    //DECLARE_ALIGNED(16, uint8_t, left_y_nnz_ctx)[16]; moved to TileData
+    //DECLARE_ALIGNED(16, uint8_t, left_mode_ctx)[16]; moved to TileData
+    //DECLARE_ALIGNED(16, VP56mv, left_mv_ctx)[16][2]; moved to TileData
+    //DECLARE_ALIGNED(16, uint8_t, left_uv_nnz_ctx)[2][16]; moved to TileData
+    //DECLARE_ALIGNED(8, uint8_t, left_partition_ctx)[8]; moved to TileData
+    //DECLARE_ALIGNED(8, uint8_t, left_skip_ctx)[8]; moved to TileData
+    DECLARE_ALIGNED(8, uint8_t, left_txfm_ctx)[8];
+    //DECLARE_ALIGNED(8, uint8_t, left_segpred_ctx)[8]; moved to TileData
     DECLARE_ALIGNED(8, uint8_t, left_intra_ctx)[8];
     DECLARE_ALIGNED(8, uint8_t, left_comp_ctx)[8];
     DECLARE_ALIGNED(8, uint8_t, left_ref_ctx)[8];
     DECLARE_ALIGNED(8, uint8_t, left_filter_ctx)[8];
     uint8_t *above_partition_ctx;
-    uint8_t *above_mode_ctx;
+    //uint8_t *above_mode_ctx; moved to TileData
     // FIXME maybe merge some of the below in a flags field?
-    uint8_t *above_y_nnz_ctx;
-    uint8_t *above_uv_nnz_ctx[2];
-    uint8_t *above_skip_ctx; // 1bit
+    //uint8_t *above_y_nnz_ctx; moved to TileData
+    //uint8_t *above_uv_nnz_ctx[2]; moved to TileData
+    //uint8_t *above_skip_ctx; // 1bit moved to TileData
     uint8_t *above_txfm_ctx; // 2bit
-    uint8_t *above_segpred_ctx; // 1bit
+    //uint8_t *above_segpred_ctx; // 1bit
     uint8_t *above_intra_ctx; // 1bit
     uint8_t *above_comp_ctx; // 1bit
     uint8_t *above_ref_ctx; // 2bit
     uint8_t *above_filter_ctx;
-    VP56mv (*above_mv_ctx)[2];
+    //VP56mv (*above_mv_ctx)[2]; moved to TileData
 
     // whole-frame cache
     uint8_t *intra_pred_data[3];
@@ -187,20 +252,22 @@ typedef struct VP9Context {
 
     // block reconstruction intermediates
     int block_alloc_using_2pass;
-    int16_t *block_base, *block, *uvblock_base[2], *uvblock[2];
-    uint8_t *eob_base, *uveob_base[2], *eob, *uveob[2];
-    struct { int x, y; } min_mv, max_mv;
+    //int16_t *block_base, *block, *uvblock_base[2], *uvblock[2]; moved to TileData
+    int16_t *block_base, *uvblock_base[2];
+    //uint8_t *eob_base, *uveob_base[2], *eob, *uveob[2];
+    uint8_t *eob_base, *uveob_base[2];
+    //struct { int x, y; } min_mv, max_mv; moved to Tile Data
     DECLARE_ALIGNED(32, uint8_t, tmp_y)[64 * 64 * 2];
     DECLARE_ALIGNED(32, uint8_t, tmp_uv)[2][64 * 64 * 2];
-    uint16_t mvscale[3][2];
-    uint8_t mvstep[3][2];
+    uint16_t mvscale[3][2]; // stable
+    uint8_t mvstep[3][2]; // stable
 } VP9Context;
 
-void ff_vp9_fill_mv(VP9Context *s, VP56mv *mv, int mode, int sb);
+void ff_vp9_fill_mv(VP9TileData *td, VP56mv *mv, int mode, int sb);
 
 void ff_vp9_adapt_probs(VP9Context *s);
 
-void ff_vp9_decode_block(AVCodecContext *ctx, int row, int col,
+void ff_vp9_decode_block(VP9TileData *td, int row, int col,
                          VP9Filter *lflvl, ptrdiff_t yoff, ptrdiff_t uvoff,
                          enum BlockLevel bl, enum BlockPartition bp);
 

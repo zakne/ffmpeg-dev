@@ -29,15 +29,16 @@
 #include "vp9data.h"
 #include "vp9dec.h"
 
-static av_always_inline int check_intra_mode(VP9Context *s, int mode, uint8_t **a,
+static av_always_inline int check_intra_mode(VP9TileData *td, int mode, uint8_t **a,
                                              uint8_t *dst_edge, ptrdiff_t stride_edge,
                                              uint8_t *dst_inner, ptrdiff_t stride_inner,
                                              uint8_t *l, int col, int x, int w,
                                              int row, int y, enum TxfmMode tx,
                                              int p, int ss_h, int ss_v, int bytesperpixel)
 {
+    VP9Context *s = td->s;
     int have_top = row > 0 || y > 0;
-    int have_left = col > s->tile_col_start || x > 0;
+    int have_left = col > td->tile_col_start || x > 0;
     int have_right = x < w - 1;
     int bpp = s->s.h.bpp;
     static const uint8_t mode_conv[10][2 /* have_left */][2 /* have_top */] = {
@@ -214,19 +215,19 @@ static av_always_inline int check_intra_mode(VP9Context *s, int mode, uint8_t **
     return mode;
 }
 
-static av_always_inline void intra_recon(AVCodecContext *avctx, ptrdiff_t y_off,
+static av_always_inline void intra_recon(VP9TileData *td, ptrdiff_t y_off,
                                          ptrdiff_t uv_off, int bytesperpixel)
 {
-    VP9Context *s = avctx->priv_data;
-    VP9Block *b = s->b;
-    int row = s->row, col = s->col;
+    VP9Context *s = td->s;
+    VP9Block *b = td->b;
+    int row = td->row, col = td->col;
     int w4 = ff_vp9_bwh_tab[1][b->bs][0] << 1, step1d = 1 << b->tx, n;
     int h4 = ff_vp9_bwh_tab[1][b->bs][1] << 1, x, y, step = 1 << (b->tx * 2);
     int end_x = FFMIN(2 * (s->cols - col), w4);
     int end_y = FFMIN(2 * (s->rows - row), h4);
     int tx = 4 * s->s.h.lossless + b->tx, uvtx = b->uvtx + 4 * s->s.h.lossless;
     int uvstep1d = 1 << b->uvtx, p;
-    uint8_t *dst = s->dst[0], *dst_r = s->s.frames[CUR_FRAME].tf.f->data[0] + y_off;
+    uint8_t *dst = td->dst[0], *dst_r = s->s.frames[CUR_FRAME].tf.f->data[0] + y_off;
     LOCAL_ALIGNED_32(uint8_t, a_buf, [96]);
     LOCAL_ALIGNED_32(uint8_t, l, [64]);
 
@@ -240,7 +241,7 @@ static av_always_inline void intra_recon(AVCodecContext *avctx, ptrdiff_t y_off,
             enum TxfmType txtp = ff_vp9_intra_txfm_type[mode];
             int eob = b->skip ? 0 : b->tx > TX_8X8 ? AV_RN16A(&s->eob[n]) : s->eob[n];
 
-            mode = check_intra_mode(s, mode, &a, ptr_r,
+            mode = check_intra_mode(td, mode, &a, ptr_r,
                                     s->s.frames[CUR_FRAME].tf.f->linesize[0],
                                     ptr, s->y_stride, l,
                                     col, x, w4, row, y, b->tx, 0, 0, 0, bytesperpixel);
@@ -259,7 +260,7 @@ static av_always_inline void intra_recon(AVCodecContext *avctx, ptrdiff_t y_off,
     end_y >>= s->ss_v;
     step = 1 << (b->uvtx * 2);
     for (p = 0; p < 2; p++) {
-        dst   = s->dst[1 + p];
+        dst   = td->dst[1 + p];
         dst_r = s->s.frames[CUR_FRAME].tf.f->data[1 + p] + uv_off;
         for (n = 0, y = 0; y < end_y; y += uvstep1d) {
             uint8_t *ptr = dst, *ptr_r = dst_r;
@@ -267,31 +268,31 @@ static av_always_inline void intra_recon(AVCodecContext *avctx, ptrdiff_t y_off,
                                    ptr_r += 4 * uvstep1d * bytesperpixel, n += step) {
                 int mode = b->uvmode;
                 uint8_t *a = &a_buf[32];
-                int eob = b->skip ? 0 : b->uvtx > TX_8X8 ? AV_RN16A(&s->uveob[p][n]) : s->uveob[p][n];
+                int eob = b->skip ? 0 : b->uvtx > TX_8X8 ? AV_RN16A(&td->uveob[p][n]) : td->uveob[p][n];
 
-                mode = check_intra_mode(s, mode, &a, ptr_r,
+                mode = check_intra_mode(td, mode, &a, ptr_r,
                                         s->s.frames[CUR_FRAME].tf.f->linesize[1],
-                                        ptr, s->uv_stride, l, col, x, w4, row, y,
+                                        ptr, td->uv_stride, l, col, x, w4, row, y,
                                         b->uvtx, p + 1, s->ss_h, s->ss_v, bytesperpixel);
-                s->dsp.intra_pred[b->uvtx][mode](ptr, s->uv_stride, l, a);
+                s->dsp.intra_pred[b->uvtx][mode](ptr, td->uv_stride, l, a);
                 if (eob)
-                    s->dsp.itxfm_add[uvtx][DCT_DCT](ptr, s->uv_stride,
-                                                    s->uvblock[p] + 16 * n * bytesperpixel, eob);
+                    s->dsp.itxfm_add[uvtx][DCT_DCT](ptr, td->uv_stride,
+                                                    td->uvblock[p] + 16 * n * bytesperpixel, eob);
             }
             dst_r += 4 * uvstep1d * s->s.frames[CUR_FRAME].tf.f->linesize[1];
-            dst   += 4 * uvstep1d * s->uv_stride;
+            dst   += 4 * uvstep1d * td->uv_stride;
         }
     }
 }
 
-void ff_vp9_intra_recon_8bpp(AVCodecContext *avctx, ptrdiff_t y_off, ptrdiff_t uv_off)
+void ff_vp9_intra_recon_8bpp(VP9TileData *td, ptrdiff_t y_off, ptrdiff_t uv_off)
 {
-    intra_recon(avctx, y_off, uv_off, 1);
+    intra_recon(td, y_off, uv_off, 1);
 }
 
-void ff_vp9_intra_recon_16bpp(AVCodecContext *avctx, ptrdiff_t y_off, ptrdiff_t uv_off)
+void ff_vp9_intra_recon_16bpp(VP9TileData *td, ptrdiff_t y_off, ptrdiff_t uv_off)
 {
-    intra_recon(avctx, y_off, uv_off, 2);
+    intra_recon(td, y_off, uv_off, 2);
 }
 
 static av_always_inline void mc_luma_unscaled(VP9Context *s, vp9_mc_func (*mc)[2],

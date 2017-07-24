@@ -111,11 +111,11 @@ fail:
     return AVERROR(ENOMEM);
 }
 
-static int update_size(AVCodecContext *avctx, int w, int h)
+static int update_size(VP9TileData *td, int w, int h)
 {
 #define HWACCEL_MAX (CONFIG_VP9_DXVA2_HWACCEL + CONFIG_VP9_D3D11VA_HWACCEL * 2 + CONFIG_VP9_VAAPI_HWACCEL)
     enum AVPixelFormat pix_fmts[HWACCEL_MAX + 2], *fmtp = pix_fmts;
-    VP9Context *s = avctx->priv_data;
+    VP9Context *s = td->s;
     uint8_t *p;
     int bytesperpixel = s->bytesperpixel, ret, cols, rows;
 
@@ -390,10 +390,10 @@ static int read_colorspace_details(AVCodecContext *avctx)
     return 0;
 }
 
-static int decode_frame_header(AVCodecContext *avctx,
+static int decode_frame_header(VP9TileData *td,
                                const uint8_t *data, int size, int *ref)
 {
-    VP9Context *s = avctx->priv_data;
+    VP9Context *s = td->s;
     int c, i, j, k, l, m, n, w, h, max, size2, ret, sharp;
     int last_invisible;
     const uint8_t *data2;
@@ -543,7 +543,7 @@ static int decode_frame_header(AVCodecContext *avctx,
     sharp = get_bits(&s->gb, 3);
     // if sharpness changed, reinit lim/mblim LUTs. if it didn't change, keep
     // the old cache values since they are still valid
-    if (s->s.h.filter.sharpness != sharp)
+    if (s->s.h.filter.sharpness != sharp) // fix this for tile threading
         memset(s->filter_lut.lim_lut, 0, sizeof(s->filter_lut.lim_lut));
     s->s.h.filter.sharpness = sharp;
     if ((s->s.h.lf_delta.enabled = get_bits1(&s->gb))) {
@@ -929,12 +929,12 @@ static int decode_frame_header(AVCodecContext *avctx,
     return (data2 - data) + size2;
 }
 
-static void decode_sb(AVCodecContext *avctx, int row, int col, VP9Filter *lflvl,
+static void decode_sb(VP9TileData *td, int row, int col, VP9Filter *lflvl,
                       ptrdiff_t yoff, ptrdiff_t uvoff, enum BlockLevel bl)
 {
-    VP9Context *s = avctx->priv_data;
-    int c = ((s->above_partition_ctx[col] >> (3 - bl)) & 1) |
-            (((s->left_partition_ctx[row & 0x7] >> (3 - bl)) & 1) << 1);
+    VP9Context *s = td->s;
+    int c = ((td->above_partition_ctx[col] >> (3 - bl)) & 1) |
+            (((td->left_partition_ctx[row & 0x7] >> (3 - bl)) & 1) << 1);
     const uint8_t *p = s->s.h.keyframe || s->s.h.intraonly ? ff_vp9_default_kf_partition_probs[bl][c] :
                                                      s->prob.p.partition[bl][c];
     enum BlockPartition bp;
@@ -944,75 +944,75 @@ static void decode_sb(AVCodecContext *avctx, int row, int col, VP9Filter *lflvl,
     int bytesperpixel = s->bytesperpixel;
 
     if (bl == BL_8X8) {
-        bp = vp8_rac_get_tree(&s->c, ff_vp9_partition_tree, p);
-        ff_vp9_decode_block(avctx, row, col, lflvl, yoff, uvoff, bl, bp);
+        bp = vp8_rac_get_tree(&td->c, ff_vp9_partition_tree, p);
+        ff_vp9_decode_block(td, row, col, lflvl, yoff, uvoff, bl, bp);
     } else if (col + hbs < s->cols) { // FIXME why not <=?
         if (row + hbs < s->rows) { // FIXME why not <=?
-            bp = vp8_rac_get_tree(&s->c, ff_vp9_partition_tree, p);
+            bp = vp8_rac_get_tree(&td->c, ff_vp9_partition_tree, p);
             switch (bp) {
             case PARTITION_NONE:
-                ff_vp9_decode_block(avctx, row, col, lflvl, yoff, uvoff, bl, bp);
+                ff_vp9_decode_block(td, row, col, lflvl, yoff, uvoff, bl, bp);
                 break;
             case PARTITION_H:
-                ff_vp9_decode_block(avctx, row, col, lflvl, yoff, uvoff, bl, bp);
+                ff_vp9_decode_block(td, row, col, lflvl, yoff, uvoff, bl, bp);
                 yoff  += hbs * 8 * y_stride;
                 uvoff += hbs * 8 * uv_stride >> s->ss_v;
                 ff_vp9_decode_block(avctx, row + hbs, col, lflvl, yoff, uvoff, bl, bp);
                 break;
             case PARTITION_V:
-                ff_vp9_decode_block(avctx, row, col, lflvl, yoff, uvoff, bl, bp);
+                ff_vp9_decode_block(td, row, col, lflvl, yoff, uvoff, bl, bp);
                 yoff  += hbs * 8 * bytesperpixel;
                 uvoff += hbs * 8 * bytesperpixel >> s->ss_h;
-                ff_vp9_decode_block(avctx, row, col + hbs, lflvl, yoff, uvoff, bl, bp);
+                ff_vp9_decode_block(td, row, col + hbs, lflvl, yoff, uvoff, bl, bp);
                 break;
             case PARTITION_SPLIT:
-                decode_sb(avctx, row, col, lflvl, yoff, uvoff, bl + 1);
-                decode_sb(avctx, row, col + hbs, lflvl,
+                decode_sb(td, row, col, lflvl, yoff, uvoff, bl + 1);
+                decode_sb(td, row, col + hbs, lflvl,
                           yoff + 8 * hbs * bytesperpixel,
                           uvoff + (8 * hbs * bytesperpixel >> s->ss_h), bl + 1);
                 yoff  += hbs * 8 * y_stride;
                 uvoff += hbs * 8 * uv_stride >> s->ss_v;
-                decode_sb(avctx, row + hbs, col, lflvl, yoff, uvoff, bl + 1);
-                decode_sb(avctx, row + hbs, col + hbs, lflvl,
+                decode_sb(td, row + hbs, col, lflvl, yoff, uvoff, bl + 1);
+                decode_sb(td, row + hbs, col + hbs, lflvl,
                           yoff + 8 * hbs * bytesperpixel,
                           uvoff + (8 * hbs * bytesperpixel >> s->ss_h), bl + 1);
                 break;
             default:
                 av_assert0(0);
             }
-        } else if (vp56_rac_get_prob_branchy(&s->c, p[1])) {
+        } else if (vp56_rac_get_prob_branchy(&td->c, p[1])) {
             bp = PARTITION_SPLIT;
-            decode_sb(avctx, row, col, lflvl, yoff, uvoff, bl + 1);
-            decode_sb(avctx, row, col + hbs, lflvl,
+            decode_sb(td, row, col, lflvl, yoff, uvoff, bl + 1);
+            decode_sb(td, row, col + hbs, lflvl,
                       yoff + 8 * hbs * bytesperpixel,
                       uvoff + (8 * hbs * bytesperpixel >> s->ss_h), bl + 1);
         } else {
             bp = PARTITION_H;
-            ff_vp9_decode_block(avctx, row, col, lflvl, yoff, uvoff, bl, bp);
+            ff_vp9_decode_block(td, row, col, lflvl, yoff, uvoff, bl, bp);
         }
     } else if (row + hbs < s->rows) { // FIXME why not <=?
-        if (vp56_rac_get_prob_branchy(&s->c, p[2])) {
+        if (vp56_rac_get_prob_branchy(&td->c, p[2])) {
             bp = PARTITION_SPLIT;
-            decode_sb(avctx, row, col, lflvl, yoff, uvoff, bl + 1);
+            decode_sb(td, row, col, lflvl, yoff, uvoff, bl + 1);
             yoff  += hbs * 8 * y_stride;
             uvoff += hbs * 8 * uv_stride >> s->ss_v;
-            decode_sb(avctx, row + hbs, col, lflvl, yoff, uvoff, bl + 1);
+            decode_sb(td, row + hbs, col, lflvl, yoff, uvoff, bl + 1);
         } else {
             bp = PARTITION_V;
             ff_vp9_decode_block(avctx, row, col, lflvl, yoff, uvoff, bl, bp);
         }
     } else {
         bp = PARTITION_SPLIT;
-        decode_sb(avctx, row, col, lflvl, yoff, uvoff, bl + 1);
+        decode_sb(td, row, col, lflvl, yoff, uvoff, bl + 1);
     }
-    s->counts.partition[bl][c][bp]++;
+    td->counts.partition[bl][c][bp]++;
 }
 
-static void decode_sb_mem(AVCodecContext *avctx, int row, int col, VP9Filter *lflvl,
+static void decode_sb_mem(VP9TileData *td, int row, int col, VP9Filter *lflvl,
                           ptrdiff_t yoff, ptrdiff_t uvoff, enum BlockLevel bl)
 {
-    VP9Context *s = avctx->priv_data;
-    VP9Block *b = s->b;
+    VP9Context *s = td->s;
+    VP9Block *b = td->b;
     ptrdiff_t hbs = 4 >> bl;
     AVFrame *f = s->s.frames[CUR_FRAME].tf.f;
     ptrdiff_t y_stride = f->linesize[0], uv_stride = f->linesize[1];
@@ -1020,39 +1020,39 @@ static void decode_sb_mem(AVCodecContext *avctx, int row, int col, VP9Filter *lf
 
     if (bl == BL_8X8) {
         av_assert2(b->bl == BL_8X8);
-        ff_vp9_decode_block(avctx, row, col, lflvl, yoff, uvoff, b->bl, b->bp);
+        ff_vp9_decode_block(td, row, col, lflvl, yoff, uvoff, b->bl, b->bp);
     } else if (s->b->bl == bl) {
-        ff_vp9_decode_block(avctx, row, col, lflvl, yoff, uvoff, b->bl, b->bp);
+        ff_vp9_decode_block(td, row, col, lflvl, yoff, uvoff, b->bl, b->bp);
         if (b->bp == PARTITION_H && row + hbs < s->rows) {
             yoff  += hbs * 8 * y_stride;
             uvoff += hbs * 8 * uv_stride >> s->ss_v;
-            ff_vp9_decode_block(avctx, row + hbs, col, lflvl, yoff, uvoff, b->bl, b->bp);
+            ff_vp9_decode_block(td, row + hbs, col, lflvl, yoff, uvoff, b->bl, b->bp);
         } else if (b->bp == PARTITION_V && col + hbs < s->cols) {
             yoff  += hbs * 8 * bytesperpixel;
             uvoff += hbs * 8 * bytesperpixel >> s->ss_h;
-            ff_vp9_decode_block(avctx, row, col + hbs, lflvl, yoff, uvoff, b->bl, b->bp);
+            ff_vp9_decode_block(td, row, col + hbs, lflvl, yoff, uvoff, b->bl, b->bp);
         }
     } else {
-        decode_sb_mem(avctx, row, col, lflvl, yoff, uvoff, bl + 1);
+        decode_sb_mem(td, row, col, lflvl, yoff, uvoff, bl + 1);
         if (col + hbs < s->cols) { // FIXME why not <=?
             if (row + hbs < s->rows) {
-                decode_sb_mem(avctx, row, col + hbs, lflvl, yoff + 8 * hbs * bytesperpixel,
+                decode_sb_mem(td, row, col + hbs, lflvl, yoff + 8 * hbs * bytesperpixel,
                               uvoff + (8 * hbs * bytesperpixel >> s->ss_h), bl + 1);
                 yoff  += hbs * 8 * y_stride;
                 uvoff += hbs * 8 * uv_stride >> s->ss_v;
-                decode_sb_mem(avctx, row + hbs, col, lflvl, yoff, uvoff, bl + 1);
-                decode_sb_mem(avctx, row + hbs, col + hbs, lflvl,
+                decode_sb_mem(td, row + hbs, col, lflvl, yoff, uvoff, bl + 1);
+                decode_sb_mem(td, row + hbs, col + hbs, lflvl,
                               yoff + 8 * hbs * bytesperpixel,
                               uvoff + (8 * hbs * bytesperpixel >> s->ss_h), bl + 1);
             } else {
                 yoff  += hbs * 8 * bytesperpixel;
                 uvoff += hbs * 8 * bytesperpixel >> s->ss_h;
-                decode_sb_mem(avctx, row, col + hbs, lflvl, yoff, uvoff, bl + 1);
+                decode_sb_mem(td, row, col + hbs, lflvl, yoff, uvoff, bl + 1);
             }
         } else if (row + hbs < s->rows) {
             yoff  += hbs * 8 * y_stride;
             uvoff += hbs * 8 * uv_stride >> s->ss_v;
-            decode_sb_mem(avctx, row + hbs, col, lflvl, yoff, uvoff, bl + 1);
+            decode_sb_mem(td, row + hbs, col, lflvl, yoff, uvoff, bl + 1);
         }
     }
 }
@@ -1098,20 +1098,133 @@ static av_cold int vp9_decode_free(AVCodecContext *avctx)
 }
 
 
+static av_always_inline
+int decode_tiles(AVCodecContext *avctx, void *tdata, int jobnr,
+                              int threadnr)
+{
+    VP9Context *s = avctx->priv_data;
+    VP9TileData *td = s->td[jobnr];
+    int tile_row, tile_col, row, col;
+    int bytesperpixel = s->bytesperpixel;
+    ptrdiff_t yoff, uvoff, ls_y, ls_uv;
+    AVFrame *f;
+    
+    uvoff = yoff = 0; // ? fix this
+    f = s->s.frames[CUR_FRAME].tf.f;
+    ls_y = f->linesize[0];
+    ls_uv =f->linesize[1];
+    
+    memset(td->above_partition_ctx, 0, s->cols);
+    memset(td->above_skip_ctx, 0, s->cols);
+    if (s->s.h.keyframe || s->s.h.intraonly) {
+        memset(td->above_mode_ctx, DC_PRED, s->cols * 2);
+    } else {
+        memset(td->above_mode_ctx, NEARESTMV, s->cols);
+    }
+    memset(td->above_y_nnz_ctx, 0, s->sb_cols * 16);
+    memset(td->above_uv_nnz_ctx[0], 0, s->sb_cols * 16 >> s->ss_h);
+    memset(td->above_uv_nnz_ctx[1], 0, s->sb_cols * 16 >> s->ss_h);
+    memset(td->above_segpred_ctx, 0, s->cols);
+    
+    for (tile_row = td->t_row_start; tile_row < td->t_row_end; tile_row++) {
+        set_tile_offset(&td->tile_row_start, &td->tile_row_end,
+                        tile_row, s->s.h.tiling.log2_tile_rows, s->sb_rows);
+        
+        for (row = td->tile_row_start; row < td->tile_row_end;
+             row += 8, yoff += ls_y * 64, uvoff += ls_uv * 64 >> s->ss_v) {
+            VP9Filter *lflvl_ptr = s->lflvl;
+            ptrdiff_t yoff2 = yoff, uvoff2 = uvoff;
+            
+            for (tile_col = td->t_col_start; tile_col < td->t_col_end; tile_col++) {
+                set_tile_offset(&td->tile_col_start, &td->tile_col_end,
+                                tile_col, s->s.h.tiling.log2_tile_cols, s->sb_cols);
+
+                if (s->pass != 2) {
+                    memset(td->left_partition_ctx, 0, 8);
+                    memset(td->left_skip_ctx, 0, 8);
+                    if (s->s.h.keyframe || s->s.h.intraonly) {
+                        memset(td->left_mode_ctx, DC_PRED, 16);
+                    } else {
+                        memset(td->left_mode_ctx, NEARESTMV, 8);
+                    }
+                    memset(td->left_y_nnz_ctx, 0, 16);
+                    memset(td->left_uv_nnz_ctx, 0, 32);
+                    memset(td->left_segpred_ctx, 0, 8);
+
+                    memcpy(&td->c, &td->c_b[tile_col], sizeof(td->c));
+                }
+
+                for (col = td->tile_col_start;
+                     col < td->tile_col_end;
+                     col += 8, yoff2 += 64 * bytesperpixel,
+                     uvoff2 += 64 * bytesperpixel >> s->ss_h, lflvl_ptr++) {
+                    // FIXME integrate with lf code (i.e. zero after each
+                    // use, similar to invtxfm coefficients, or similar)
+                    if (s->pass != 1) {
+                        memset(lflvl_ptr->mask, 0, sizeof(lflvl_ptr->mask));
+                    }
+
+                    if (s->pass == 2) {
+                        decode_sb_mem(td, row, col, lflvl_ptr,
+                                      yoff2, uvoff2, BL_64X64);
+                    } else {
+                        decode_sb(td, row, col, lflvl_ptr,
+                                  yoff2, uvoff2, BL_64X64);
+                    }
+                }
+                if (s->pass != 2)
+                    memcpy(&td->c_b[tile_col], &td->c, sizeof(td->c));
+            }
+
+            if (s->pass == 1)
+                continue;
+
+            /* implement later
+            // backup pre-loopfilter reconstruction data for intra
+            // prediction of next row of sb64s
+            if (row + 8 < s->rows) {
+                memcpy(s->intra_pred_data[0],
+                       f->data[0] + yoff + 63 * ls_y,
+                       8 * s->cols * bytesperpixel);
+                memcpy(s->intra_pred_data[1],
+                       f->data[1] + uvoff + ((64 >> s->ss_v) - 1) * ls_uv,
+                       8 * s->cols * bytesperpixel >> s->ss_h);
+                memcpy(s->intra_pred_data[2],
+                       f->data[2] + uvoff + ((64 >> s->ss_v) - 1) * ls_uv,
+                       8 * s->cols * bytesperpixel >> s->ss_h);
+            }
+
+            // loopfilter one row
+            if (s->s.h.filter.level) {
+                yoff2 = yoff;
+                uvoff2 = uvoff;
+                lflvl_ptr = s->lflvl;
+                for (col = 0; col < s->cols;
+                     col += 8, yoff2 += 64 * bytesperpixel,
+                     uvoff2 += 64 * bytesperpixel >> s->ss_h, lflvl_ptr++) {
+                    ff_vp9_loopfilter_sb(avctx, lflvl_ptr, row, col,
+                                         yoff2, uvoff2);
+                }
+            } */
+        }
+    }
+}
+
 static int vp9_decode_frame(AVCodecContext *avctx, void *frame,
                             int *got_frame, AVPacket *pkt)
 {
     const uint8_t *data = pkt->data;
     int size = pkt->size;
     VP9Context *s = avctx->priv_data;
-    int ret, tile_row, tile_col, i, ref, row, col;
+    VP9TileData *td = s->td;
+    int ret, tile_row, tile_col, i, ref;//, row, col;
+    int base, remain, num_jobs;
     int retain_segmap_ref = s->s.frames[REF_FRAME_SEGMAP].segmentation_map &&
                             (!s->s.h.segmentation.enabled || !s->s.h.segmentation.update_map);
     ptrdiff_t yoff, uvoff, ls_y, ls_uv;
     AVFrame *f;
-    int bytesperpixel;
 
-    if ((ret = decode_frame_header(avctx, data, size, &ref)) < 0) {
+    if ((ret = decode_frame_header(td, data, size, &ref)) < 0) {
         return ret;
     } else if (ret == 0) {
         if (!s->s.refs[ref].f->buf[0]) {
@@ -1159,9 +1272,7 @@ FF_ENABLE_DEPRECATION_WARNINGS
     f = s->s.frames[CUR_FRAME].tf.f;
     f->key_frame = s->s.h.keyframe;
     f->pict_type = (s->s.h.keyframe || s->s.h.intraonly) ? AV_PICTURE_TYPE_I : AV_PICTURE_TYPE_P;
-    ls_y = f->linesize[0];
-    ls_uv =f->linesize[1];
-
+    
     if (s->s.frames[REF_FRAME_SEGMAP].tf.f->buf[0] &&
         (s->s.frames[REF_FRAME_MVPAIR].tf.f->width  != s->s.frames[CUR_FRAME].tf.f->width ||
          s->s.frames[REF_FRAME_MVPAIR].tf.f->height != s->s.frames[CUR_FRAME].tf.f->height)) {
@@ -1195,18 +1306,6 @@ FF_ENABLE_DEPRECATION_WARNINGS
     }
 
     // main tile decode loop
-    bytesperpixel = s->bytesperpixel;
-    memset(s->above_partition_ctx, 0, s->cols);
-    memset(s->above_skip_ctx, 0, s->cols);
-    if (s->s.h.keyframe || s->s.h.intraonly) {
-        memset(s->above_mode_ctx, DC_PRED, s->cols * 2);
-    } else {
-        memset(s->above_mode_ctx, NEARESTMV, s->cols);
-    }
-    memset(s->above_y_nnz_ctx, 0, s->sb_cols * 16);
-    memset(s->above_uv_nnz_ctx[0], 0, s->sb_cols * 16 >> s->ss_h);
-    memset(s->above_uv_nnz_ctx[1], 0, s->sb_cols * 16 >> s->ss_h);
-    memset(s->above_segpred_ctx, 0, s->cols);
     s->pass = s->s.frames[CUR_FRAME].uses_2pass =
         avctx->active_thread_type == FF_THREAD_FRAME && s->s.h.refreshctx && !s->s.h.parallelmode;
     if ((ret = update_block_buffers(avctx)) < 0) {
@@ -1232,8 +1331,8 @@ FF_ENABLE_DEPRECATION_WARNINGS
     } else if (!s->s.h.refreshctx) {
         ff_thread_finish_setup(avctx);
     }
-
-    do {
+    
+    {
         yoff = uvoff = 0;
         s->b = s->b_base;
         s->block = s->block_base;
@@ -1242,128 +1341,61 @@ FF_ENABLE_DEPRECATION_WARNINGS
         s->eob = s->eob_base;
         s->uveob[0] = s->uveob_base[0];
         s->uveob[1] = s->uveob_base[1];
-
-        for (tile_row = 0; tile_row < s->s.h.tiling.tile_rows; tile_row++) {
-            set_tile_offset(&s->tile_row_start, &s->tile_row_end,
-                            tile_row, s->s.h.tiling.log2_tile_rows, s->sb_rows);
-            if (s->pass != 2) {
-                for (tile_col = 0; tile_col < s->s.h.tiling.tile_cols; tile_col++) {
-                    int64_t tile_size;
-
-                    if (tile_col == s->s.h.tiling.tile_cols - 1 &&
+        
+        if (avctx->active_thread_type == FF_THREAD_FRAME)
+            num_jobs = 1;
+        else
+            num_jobs = FFMIN(s->s.h.tiling.tile_rows*s->s.h.tiling.tile_cols, avctx->thread_count);
+        
+        base = tile_num/num_jobs;
+        remain = tile_num%num_jobs;
+        
+        int index = 0;
+        tile_col = 0;
+        tile_row = 0;
+        for (int i = 0; i < avctx->thread_count; i++) {
+            int count = base+(remain+i)/avctx->thread_count;
+            
+            td[i]->t_row_start = tile_row;
+            td[i]->t_col_start = tile_col;
+            for (int j = 0; j < count; index++,j++) {
+                tile_col = index%s->s.h.tiling.tile_cols;
+                tile_row = (index-tile_col)/s->s.h.tiling.tile_cols;
+                if (tile_col == s->s.h.tiling.tile_cols - 1 &&
                         tile_row == s->s.h.tiling.tile_rows - 1) {
-                        tile_size = size;
-                    } else {
-                        tile_size = AV_RB32(data);
-                        data += 4;
-                        size -= 4;
-                    }
-                    if (tile_size > size) {
-                        ff_thread_report_progress(&s->s.frames[CUR_FRAME].tf, INT_MAX, 0);
-                        return AVERROR_INVALIDDATA;
-                    }
-                    ret = ff_vp56_init_range_decoder(&s->c_b[tile_col], data, tile_size);
-                    if (ret < 0)
-                        return ret;
-                    if (vp56_rac_get_prob_branchy(&s->c_b[tile_col], 128)) { // marker bit
-                        ff_thread_report_progress(&s->s.frames[CUR_FRAME].tf, INT_MAX, 0);
-                        return AVERROR_INVALIDDATA;
-                    }
-                    data += tile_size;
-                    size -= tile_size;
+                    tile_size = size;
+                } else {
+                    tile_size = AV_RB32(data);
+                    data += 4;
+                    size -= 4;
                 }
+                if (tile_size > size) {
+                    ff_thread_report_progress(&s->s.frames[CUR_FRAME].tf, INT_MAX, 0);
+                    return AVERROR_INVALIDDATA;
+                }
+                ret = ff_vp56_init_range_decoder(&td[i]->c_b[j], data, tile_size);
+                if (ret < 0)
+                    return ret;
+                if (vp56_rac_get_prob_branchy(&td[i]->c_b[j], 128)) { // marker bit
+                    ff_thread_report_progress(&s->s.frames[CUR_FRAME].tf, INT_MAX, 0);
+                    return AVERROR_INVALIDDATA;
+                }
+                data += tile_size;
+                size -= tile_size;
             }
-
-            for (row = s->tile_row_start; row < s->tile_row_end;
-                 row += 8, yoff += ls_y * 64, uvoff += ls_uv * 64 >> s->ss_v) {
-                VP9Filter *lflvl_ptr = s->lflvl;
-                ptrdiff_t yoff2 = yoff, uvoff2 = uvoff;
-
-                for (tile_col = 0; tile_col < s->s.h.tiling.tile_cols; tile_col++) {
-                    set_tile_offset(&s->tile_col_start, &s->tile_col_end,
-                                    tile_col, s->s.h.tiling.log2_tile_cols, s->sb_cols);
-
-                    if (s->pass != 2) {
-                        memset(s->left_partition_ctx, 0, 8);
-                        memset(s->left_skip_ctx, 0, 8);
-                        if (s->s.h.keyframe || s->s.h.intraonly) {
-                            memset(s->left_mode_ctx, DC_PRED, 16);
-                        } else {
-                            memset(s->left_mode_ctx, NEARESTMV, 8);
-                        }
-                        memset(s->left_y_nnz_ctx, 0, 16);
-                        memset(s->left_uv_nnz_ctx, 0, 32);
-                        memset(s->left_segpred_ctx, 0, 8);
-
-                        memcpy(&s->c, &s->c_b[tile_col], sizeof(s->c));
-                    }
-
-                    for (col = s->tile_col_start;
-                         col < s->tile_col_end;
-                         col += 8, yoff2 += 64 * bytesperpixel,
-                         uvoff2 += 64 * bytesperpixel >> s->ss_h, lflvl_ptr++) {
-                        // FIXME integrate with lf code (i.e. zero after each
-                        // use, similar to invtxfm coefficients, or similar)
-                        if (s->pass != 1) {
-                            memset(lflvl_ptr->mask, 0, sizeof(lflvl_ptr->mask));
-                        }
-
-                        if (s->pass == 2) {
-                            decode_sb_mem(avctx, row, col, lflvl_ptr,
-                                          yoff2, uvoff2, BL_64X64);
-                        } else {
-                            decode_sb(avctx, row, col, lflvl_ptr,
-                                      yoff2, uvoff2, BL_64X64);
-                        }
-                    }
-                    if (s->pass != 2)
-                        memcpy(&s->c_b[tile_col], &s->c, sizeof(s->c));
-                }
-
-                if (s->pass == 1)
-                    continue;
-
-                // backup pre-loopfilter reconstruction data for intra
-                // prediction of next row of sb64s
-                if (row + 8 < s->rows) {
-                    memcpy(s->intra_pred_data[0],
-                           f->data[0] + yoff + 63 * ls_y,
-                           8 * s->cols * bytesperpixel);
-                    memcpy(s->intra_pred_data[1],
-                           f->data[1] + uvoff + ((64 >> s->ss_v) - 1) * ls_uv,
-                           8 * s->cols * bytesperpixel >> s->ss_h);
-                    memcpy(s->intra_pred_data[2],
-                           f->data[2] + uvoff + ((64 >> s->ss_v) - 1) * ls_uv,
-                           8 * s->cols * bytesperpixel >> s->ss_h);
-                }
-
-                // loopfilter one row
-                if (s->s.h.filter.level) {
-                    yoff2 = yoff;
-                    uvoff2 = uvoff;
-                    lflvl_ptr = s->lflvl;
-                    for (col = 0; col < s->cols;
-                         col += 8, yoff2 += 64 * bytesperpixel,
-                         uvoff2 += 64 * bytesperpixel >> s->ss_h, lflvl_ptr++) {
-                        ff_vp9_loopfilter_sb(avctx, lflvl_ptr, row, col,
-                                             yoff2, uvoff2);
-                    }
-                }
-
-                // FIXME maybe we can make this more finegrained by running the
-                // loopfilter per-block instead of after each sbrow
-                // In fact that would also make intra pred left preparation easier?
-                ff_thread_report_progress(&s->s.frames[CUR_FRAME].tf, row >> 3, 0);
-            }
+            td[i]->t_row_end = tile_row;
+            td[i]->t_col_end = tile_col;
         }
-
+        
+        avctx->execute2(avctx, decode_tiles, s->td, NULL,
+                        num_jobs);
+        
         if (s->pass < 2 && s->s.h.refreshctx && !s->s.h.parallelmode) {
             ff_vp9_adapt_probs(s);
             ff_thread_finish_setup(avctx);
         }
-    } while (s->pass++ == 1);
-    ff_thread_report_progress(&s->s.frames[CUR_FRAME].tf, INT_MAX, 0);
-
+    }
+    
 finish:
     // ref frame setup
     for (i = 0; i < 8; i++) {
@@ -1492,7 +1524,7 @@ AVCodec ff_vp9_decoder = {
     .init                  = vp9_decode_init,
     .close                 = vp9_decode_free,
     .decode                = vp9_decode_frame,
-    .capabilities          = AV_CODEC_CAP_DR1 | AV_CODEC_CAP_FRAME_THREADS,
+    .capabilities          = AV_CODEC_CAP_DR1 | AV_CODEC_CAP_FRAME_THREADS | AV_CODEC_CAP_SLICE_THREADS,
     .flush                 = vp9_decode_flush,
     .init_thread_copy      = ONLY_IF_THREADS_ENABLED(vp9_decode_init_thread_copy),
     .update_thread_context = ONLY_IF_THREADS_ENABLED(vp9_decode_update_thread_context),
