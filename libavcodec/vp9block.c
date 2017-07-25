@@ -1439,20 +1439,6 @@ void ff_vp9_decode_block(AVCodecContext *avctx, int row, int col,
                        s->cols & 1 && col + w4 >= s->cols ? s->cols & 7 : 0,
                        s->rows & 1 && row + h4 >= s->rows ? s->rows & 7 : 0,
                        b->uvtx, skip_inter);
-
-        if (!s->filter_lut.lim_lut[lvl]) {
-            int sharp = s->s.h.filter.sharpness;
-            int limit = lvl;
-
-            if (sharp > 0) {
-                limit >>= (sharp + 3) >> 2;
-                limit = FFMIN(limit, 9 - sharp);
-            }
-            limit = FFMAX(limit, 1);
-
-            s->filter_lut.lim_lut[lvl] = limit;
-            s->filter_lut.mblim_lut[lvl] = 2 * (lvl + 2) + limit;
-        }
     }
 
     if (s->pass == 2) {

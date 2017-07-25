@@ -543,8 +543,25 @@ static int decode_frame_header(AVCodecContext *avctx,
     sharp = get_bits(&s->gb, 3);
     // if sharpness changed, reinit lim/mblim LUTs. if it didn't change, keep
     // the old cache values since they are still valid
-    if (s->s.h.filter.sharpness != sharp)
+    if (s->s.h.filter.sharpness != sharp) {
         memset(s->filter_lut.lim_lut, 0, sizeof(s->filter_lut.lim_lut));
+    } else {
+        for (i = 1; i <= 63; i++) {
+            if (!s->filter_lut.lim_lut[i]) {
+                int sharp = s->s.h.filter.sharpness;
+                int limit = i;
+
+                if (sharp > 0) {
+                    limit >>= (sharp + 3) >> 2;
+                    limit = FFMIN(limit, 9 - sharp);
+                }
+                limit = FFMAX(limit, 1);
+
+                s->filter_lut.lim_lut[i] = limit;
+                s->filter_lut.mblim_lut[i] = 2 * (i + 2) + limit;
+            }
+        }
+    }
     s->s.h.filter.sharpness = sharp;
     if ((s->s.h.lf_delta.enabled = get_bits1(&s->gb))) {
         if ((s->s.h.lf_delta.updated = get_bits1(&s->gb))) {
