@@ -38,11 +38,13 @@
 
 typedef int (action_func)(AVCodecContext *c, void *arg);
 typedef int (action_func2)(AVCodecContext *c, void *arg, int jobnr, int threadnr);
+typedef int (main_func)(AVCodecContext *c);
 
 typedef struct SliceThreadContext {
     AVSliceThread *thread;
     action_func *func;
     action_func2 *func2;
+    main_func *m_func;
     void *args;
     int *rets;
     int job_size;
@@ -52,7 +54,14 @@ typedef struct SliceThreadContext {
     int thread_count;
     pthread_cond_t *progress_cond;
     pthread_mutex_t *progress_mutex;
+    pthread_barrier_t barrier;
 } SliceThreadContext;
+
+static void main_function(void *priv) {
+    AVCodecContext *avctx = priv;
+    SliceThreadContext *c = avctx->internal->thread_ctx;
+    c->m_func(avctx);
+}
 
 static void worker_func(void *priv, int jobnr, int threadnr, int nb_jobs, int nb_threads)
 {
@@ -77,6 +86,7 @@ void ff_slice_thread_free(AVCodecContext *avctx)
         pthread_mutex_destroy(&c->progress_mutex[i]);
         pthread_cond_destroy(&c->progress_cond[i]);
     }
+    pthread_barrier_destroy(&c->barrier);
 
     av_freep(&c->entries);
     av_freep(&c->progress_mutex);
@@ -99,7 +109,11 @@ static int thread_execute(AVCodecContext *avctx, action_func* func, void *arg, i
     c->func = func;
     c->rets = ret;
 
-    avpriv_slicethread_execute(c->thread, job_count, 0);
+    if (c->m_func)
+        avpriv_slicethread_execute(c->thread, job_count, 1);
+    else
+        avpriv_slicethread_execute(c->thread, job_count, 0);
+
     return 0;
 }
 
@@ -109,6 +123,15 @@ static int thread_execute2(AVCodecContext *avctx, action_func2* func2, void *arg
     c->func2 = func2;
     return thread_execute(avctx, NULL, arg, ret, job_count, 0);
 }
+
+static int thread_execute3(AVCodecContext *avctx, action_func2* func2, main_func* m_func, void *arg, int *ret, int job_count)
+{
+    SliceThreadContext *c = avctx->internal->thread_ctx;
+    c->func2 = func2;
+    c->m_func = m_func;
+    return thread_execute(avctx, NULL, arg, ret, job_count, 0);
+}
+
 
 int ff_slice_thread_init(AVCodecContext *avctx)
 {
@@ -142,7 +165,7 @@ int ff_slice_thread_init(AVCodecContext *avctx)
     }
 
     avctx->internal->thread_ctx = c = av_mallocz(sizeof(*c));
-    if (!c || (thread_count = avpriv_slicethread_create(&c->thread, avctx, worker_func, NULL, thread_count)) <= 1) {
+    if (!c || (thread_count = avpriv_slicethread_create(&c->thread, avctx, worker_func, main_function, thread_count)) <= 1) {
         if (c)
             avpriv_slicethread_free(&c->thread);
         av_freep(&avctx->internal->thread_ctx);
@@ -150,10 +173,12 @@ int ff_slice_thread_init(AVCodecContext *avctx)
         avctx->active_thread_type = 0;
         return 0;
     }
+    c->m_func = NULL;
     avctx->thread_count = thread_count;
 
     avctx->execute = thread_execute;
     avctx->execute2 = thread_execute2;
+    avctx->execute3 = thread_execute3;
     return 0;
 }
 
@@ -168,6 +193,18 @@ void ff_thread_report_progress2(AVCodecContext *avctx, int field, int thread, in
     pthread_mutex_unlock(&p->progress_mutex[thread]);
 }
 
+void ff_thread_report_progress3(AVCodecContext *avctx, int field, int thread, int n)
+{
+    SliceThreadContext *p = avctx->internal->thread_ctx;
+    int *entries = p->entries;
+
+    pthread_mutex_lock(&p->progress_mutex[thread]);
+    entries[field] +=n;
+    pthread_cond_signal(&p->progress_cond[thread]);
+    pthread_mutex_unlock(&p->progress_mutex[thread]);
+    pthread_barrier_wait(&p->barrier);
+}
+
 void ff_thread_await_progress2(AVCodecContext *avctx, int field, int thread, int shift)
 {
     SliceThreadContext *p  = avctx->internal->thread_ctx;
@@ -179,6 +216,18 @@ void ff_thread_await_progress2(AVCodecContext *avctx, int field, int thread, int
 
     pthread_mutex_lock(&p->progress_mutex[thread]);
     while ((entries[field - 1] - entries[field]) < shift){
+        pthread_cond_wait(&p->progress_cond[thread], &p->progress_mutex[thread]);
+    }
+    pthread_mutex_unlock(&p->progress_mutex[thread]);
+}
+
+void ff_thread_await_progress3(AVCodecContext *avctx, int field, int thread, int shift)
+{
+    SliceThreadContext *p  = avctx->internal->thread_ctx;
+    int *entries      = p->entries;
+    
+    pthread_mutex_lock(&p->progress_mutex[thread]);
+    while ((entries[field]) != shift){
         pthread_cond_wait(&p->progress_cond[thread], &p->progress_mutex[thread]);
     }
     pthread_mutex_unlock(&p->progress_mutex[thread]);
@@ -216,6 +265,7 @@ int ff_alloc_entries(AVCodecContext *avctx, int count)
             pthread_mutex_init(&p->progress_mutex[i], NULL);
             pthread_cond_init(&p->progress_cond[i], NULL);
         }
+        pthread_barrier_init(&p->barrier, NULL, p->thread_count);
     }
 
     return 0;
