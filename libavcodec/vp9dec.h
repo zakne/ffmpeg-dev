@@ -84,65 +84,7 @@ typedef struct VP9Block {
     enum BlockPartition bp;
 } VP9Block;
 
-typedef struct VP9TileData {
-    VP9Context *s;
-    VP56RangeCoder c;
-    int row, row7, col, col7;
-    uint8_t *dst[3];
-    ptrdiff_t y_stride, uv_stride, yoff, uvoff;
-    VP9Block *b_base, *b;
-    unsigned tile_row_start, tile_row_end, tile_col_start, tile_col_end;
-    
-    struct {
-        unsigned y_mode[4][10];
-        unsigned uv_mode[10][10];
-        unsigned filter[4][3];
-        unsigned mv_mode[7][4];
-        unsigned intra[4][2];
-        unsigned comp[5][2];
-        unsigned single_ref[5][2][2];
-        unsigned comp_ref[5][2];
-        unsigned tx32p[2][4];
-        unsigned tx16p[2][3];
-        unsigned tx8p[2][2];
-        unsigned skip[3][2];
-        unsigned mv_joint[4];
-        struct {
-            unsigned sign[2];
-            unsigned classes[11];
-            unsigned class0[2];
-            unsigned bits[10][2];
-            unsigned class0_fp[2][4];
-            unsigned fp[4];
-            unsigned class0_hp[2];
-            unsigned hp[2];
-        } mv_comp[2];
-        unsigned partition[4][4][4];
-        unsigned coef[4][2][2][6][6][3];
-        unsigned eob[4][2][2][6][6][2];
-    } counts;
-
-    // whole-frame cache
-    VP9Filter *lflvl_ptr;
-
-    // contextual (left) cache
-    DECLARE_ALIGNED(16, uint8_t, left_y_nnz_ctx)[16];
-    DECLARE_ALIGNED(16, uint8_t, left_mode_ctx)[16];
-    DECLARE_ALIGNED(16, VP56mv, left_mv_ctx)[16][2];
-    DECLARE_ALIGNED(16, uint8_t, left_uv_nnz_ctx)[2][16];
-    DECLARE_ALIGNED(8, uint8_t, left_partition_ctx)[8];
-    DECLARE_ALIGNED(8, uint8_t, left_skip_ctx)[8];
-    DECLARE_ALIGNED(8, uint8_t, left_txfm_ctx)[8];
-    DECLARE_ALIGNED(8, uint8_t, left_segpred_ctx)[8];
-    DECLARE_ALIGNED(8, uint8_t, left_intra_ctx)[8];
-    DECLARE_ALIGNED(8, uint8_t, left_comp_ctx)[8];
-    DECLARE_ALIGNED(8, uint8_t, left_ref_ctx)[8];
-    DECLARE_ALIGNED(8, uint8_t, left_filter_ctx)[8];
-    // block reconstruction intermediates
-    struct { int x, y; } min_mv, max_mv;
-    int16_t *block_base, *block, *uvblock_base[2], *uvblock[2];
-    uint8_t *eob_base, *uveob_base[2], *eob, *uveob[2];
-} VP9TileData;
+struct VP9TileData;
 
 typedef struct VP9Context {
     VP9TileData *td;
@@ -238,6 +180,66 @@ typedef struct VP9Context {
     uint16_t mvscale[3][2];
     uint8_t mvstep[3][2];
 } VP9Context;
+
+typedef struct VP9TileData {
+    VP9Context *s;
+    VP56RangeCoder c;
+    int row, row7, col, col7;
+    uint8_t *dst[3];
+    ptrdiff_t y_stride, uv_stride, yoff, uvoff;
+    VP9Block *b_base, *b;
+    unsigned tile_row_start, tile_row_end, tile_col_start, tile_col_end;
+    
+    struct {
+        unsigned y_mode[4][10];
+        unsigned uv_mode[10][10];
+        unsigned filter[4][3];
+        unsigned mv_mode[7][4];
+        unsigned intra[4][2];
+        unsigned comp[5][2];
+        unsigned single_ref[5][2][2];
+        unsigned comp_ref[5][2];
+        unsigned tx32p[2][4];
+        unsigned tx16p[2][3];
+        unsigned tx8p[2][2];
+        unsigned skip[3][2];
+        unsigned mv_joint[4];
+        struct {
+            unsigned sign[2];
+            unsigned classes[11];
+            unsigned class0[2];
+            unsigned bits[10][2];
+            unsigned class0_fp[2][4];
+            unsigned fp[4];
+            unsigned class0_hp[2];
+            unsigned hp[2];
+        } mv_comp[2];
+        unsigned partition[4][4][4];
+        unsigned coef[4][2][2][6][6][3];
+        unsigned eob[4][2][2][6][6][2];
+    } counts;
+
+    // whole-frame cache
+    VP9Filter *lflvl_ptr;
+
+    // contextual (left) cache
+    DECLARE_ALIGNED(16, uint8_t, left_y_nnz_ctx)[16];
+    DECLARE_ALIGNED(16, uint8_t, left_mode_ctx)[16];
+    DECLARE_ALIGNED(16, VP56mv, left_mv_ctx)[16][2];
+    DECLARE_ALIGNED(16, uint8_t, left_uv_nnz_ctx)[2][16];
+    DECLARE_ALIGNED(8, uint8_t, left_partition_ctx)[8];
+    DECLARE_ALIGNED(8, uint8_t, left_skip_ctx)[8];
+    DECLARE_ALIGNED(8, uint8_t, left_txfm_ctx)[8];
+    DECLARE_ALIGNED(8, uint8_t, left_segpred_ctx)[8];
+    DECLARE_ALIGNED(8, uint8_t, left_intra_ctx)[8];
+    DECLARE_ALIGNED(8, uint8_t, left_comp_ctx)[8];
+    DECLARE_ALIGNED(8, uint8_t, left_ref_ctx)[8];
+    DECLARE_ALIGNED(8, uint8_t, left_filter_ctx)[8];
+    // block reconstruction intermediates
+    struct { int x, y; } min_mv, max_mv;
+    int16_t *block_base, *block, *uvblock_base[2], *uvblock[2];
+    uint8_t *eob_base, *uveob_base[2], *eob, *uveob[2];
+} VP9TileData;
 
 void ff_vp9_fill_mv(VP9TileData *td, VP56mv *mv, int mode, int sb);
 
