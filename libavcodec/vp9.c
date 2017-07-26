@@ -244,7 +244,7 @@ static int update_block_buffers(AVCodecContext *avctx)
             s->td[i].b_base = av_malloc(sizeof(VP9Block));
             s->td[i].block_base = av_mallocz((64 * 64 + 2 * chroma_blocks) * bytesperpixel * sizeof(int16_t) +
                                        16 * 16 + 2 * chroma_eobs);
-            if (!s->td[i]->b_base || !s->td[i]->block_base)
+            if (!s->td[i].b_base || !s->td[i].block_base)
                 return AVERROR(ENOMEM);
             s->td[i].uvblock_base[0] = s->td[i].block_base + 64 * 64 * bytesperpixel;
             s->td[i].uvblock_base[1] = s->td[i].uvblock_base[0] + chroma_blocks * bytesperpixel;
@@ -1101,8 +1101,8 @@ static void free_buffers(VP9Context *s)
     
     av_freep(&s->intra_pred_data[0]);
     for (i = 0; i < s->s.h.tiling.tile_cols*s->s.h.tiling.tile_rows; i++) {
-        av_freep(&s->td[i]->b_base);
-        av_freep(&s->td[i]->block_base);
+        av_freep(&s->td[i].b_base);
+        av_freep(&s->td[i].block_base);
     }
 }
 
@@ -1224,6 +1224,7 @@ int decode_tiles(AVCodecContext *avctx, void *tdata, int jobnr,
         // In fact that would also make intra pred left preparation easier?
         ff_thread_report_progress(&s->s.frames[CUR_FRAME].tf, row >> 3, 0);*/
     }
+    return 0;
 }
 
 static int vp9_decode_frame(AVCodecContext *avctx, void *frame,
