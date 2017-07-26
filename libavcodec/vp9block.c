@@ -1308,7 +1308,7 @@ void ff_vp9_decode_block(VP9TileData *td, int row, int col,
                 memset(&td->left_skip_ctx[td->row7], 1, h4);
             }
         } else {
-            int row7 = s->row7;
+            int row7 = td->row7;
 
 #define SPLAT_ZERO_CTX(v, n) \
     switch (n) { \
