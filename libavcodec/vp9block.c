@@ -951,7 +951,7 @@ static int decode_coeffs_b_16bpp(VP9TileData *td, int16_t *coef, int n_coeffs,
                                  const int16_t (*nb)[2], const int16_t *band_counts,
                                  const int16_t *qmul)
 {
-    return decode_coeffs_b_generic(&td->c, coef, n_coeffs, 0, 0, s->s.h.bpp, cnt, eob, p,
+    return decode_coeffs_b_generic(&td->c, coef, n_coeffs, 0, 0, td->s->s.h.bpp, cnt, eob, p,
                                    nnz, scan, nb, band_counts, qmul);
 }
 
@@ -961,7 +961,7 @@ static int decode_coeffs_b32_16bpp(VP9TileData *td, int16_t *coef, int n_coeffs,
                                    const int16_t (*nb)[2], const int16_t *band_counts,
                                    const int16_t *qmul)
 {
-    return decode_coeffs_b_generic(&td->c, coef, n_coeffs, 1, 0, s->s.h.bpp, cnt, eob, p,
+    return decode_coeffs_b_generic(&td->c, coef, n_coeffs, 1, 0, td->s->s.h.bpp, cnt, eob, p,
                                    nnz, scan, nb, band_counts, qmul);
 }
 
@@ -1305,7 +1305,7 @@ void ff_vp9_decode_block(VP9TileData *td, int row, int col,
             if (!has_coeffs && b->bs <= BS_8x8 && !b->intra) {
                 b->skip = 1;
                 memset(&s->above_skip_ctx[col], 1, w4);
-                memset(&td->left_skip_ctx[s->row7], 1, h4);
+                memset(&td->left_skip_ctx[td->row7], 1, h4);
             }
         } else {
             int row7 = s->row7;
