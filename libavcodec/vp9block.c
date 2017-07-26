@@ -226,7 +226,7 @@ static void decode_mode(VP9TileData *td)
             a[0]       = vp8_rac_get_tree(&td->c, ff_vp9_intramode_tree,
                                           ff_vp9_default_kf_ymode_probs[a[0]][l[0]]);
             if (b->bs != BS_8x4) {
-                b->mode[1] = vp8_rac_get_tree(&s->c, ff_vp9_intramode_tree,
+                b->mode[1] = vp8_rac_get_tree(&td->c, ff_vp9_intramode_tree,
                                               ff_vp9_default_kf_ymode_probs[a[1]][b->mode[0]]);
                 l[0]       =
                 a[1]       = b->mode[1];
