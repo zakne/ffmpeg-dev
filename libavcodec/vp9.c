@@ -1378,9 +1378,6 @@ FF_ENABLE_DEPRECATION_WARNINGS
             set_tile_offset(&tile_row_start, &tile_row_end,
                             tile_row, s->s.h.tiling.log2_tile_rows, s->sb_rows);
 
-            for (row = tile_row_start; row < tile_row_end;
-                 row += 8, yoff += ls_y * 64, uvoff += ls_uv * 64 >> s->ss_v);
-
             VP9Filter *lflvl_ptr = s->lflvl;
             if (s->pass != 2) {
                 for (tile_col = 0; tile_col < s->s.h.tiling.tile_cols; tile_col++) {
@@ -1422,6 +1419,8 @@ FF_ENABLE_DEPRECATION_WARNINGS
                     s->td[td_cnt].s = s;
                     td_cnt++;
                 }
+                for (row = tile_row_start; row < tile_row_end;
+                 row += 8, yoff += ls_y * 64, uvoff += ls_uv * 64 >> s->ss_v);
             }
         }
 
