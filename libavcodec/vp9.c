@@ -1416,7 +1416,7 @@ FF_ENABLE_DEPRECATION_WARNINGS
                         s->td[td_cnt].tile_col_start = tile_col_start;
                         s->td[td_cnt].tile_col_end = tile_col_end; 
                         s->td[td_cnt].tile_row_start = tile_row_start;
-                        s->td[td_cnt].tile_end_start = tile_end_start;
+                        s->td[td_cnt].tile_row_end = tile_row_end;
                         s->td[td_cnt].yoff = yoff;
                         s->td[td_cnt].uvoff = uvoff;
                         s->td[td_cnt].s = s;
