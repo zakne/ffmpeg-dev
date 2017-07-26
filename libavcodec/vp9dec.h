@@ -84,7 +84,7 @@ typedef struct VP9Block {
     enum BlockPartition bp;
 } VP9Block;
 
-struct VP9TileData;
+typedef struct VP9TileData VP9TileData;
 
 typedef struct VP9Context {
     VP9TileData *td;
