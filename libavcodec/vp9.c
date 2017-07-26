@@ -1413,7 +1413,7 @@ FF_ENABLE_DEPRECATION_WARNINGS
                         data += tile_size;
                         size -= tile_size;
 
-                        s->td[td_cnt].tile_col_start = tile_col_start 
+                        s->td[td_cnt].tile_col_start = tile_col_start;
                         s->td[td_cnt].tile_col_end = tile_col_end; 
                         s->td[td_cnt].tile_row_start = tile_row_start;
                         s->td[td_cnt].tile_end_start = tile_end_start;
