@@ -348,7 +348,7 @@ static void decode_mode(VP9TileData *td)
                         } else if (s->above_comp_ctx[col]) {
                             c = 2 + (td->left_intra_ctx[row7] ||
                                      td->left_ref_ctx[row7] == s->s.h.fixcompref);
-                        } else if (s->left_comp_ctx[row7]) {
+                        } else if (td->left_comp_ctx[row7]) {
                             c = 2 + (s->above_intra_ctx[col] ||
                                      s->above_ref_ctx[col] == s->s.h.fixcompref);
                         } else {
@@ -517,7 +517,7 @@ static void decode_mode(VP9TileData *td)
                                     } else {
                                         c = 2;
                                     }
-                                } else if (!s->left_ref_ctx[row7]) {
+                                } else if (!td->left_ref_ctx[row7]) {
                                     c = 1 + 2 * (s->s.h.fixcompref == 1 ||
                                                  s->above_ref_ctx[col] == 1);
                                 } else {
@@ -716,33 +716,33 @@ static void decode_mode(VP9TileData *td)
 #endif
 
     switch (ff_vp9_bwh_tab[1][b->bs][0]) {
-#define SET_CTXS(dir, off, n) \
+#define SET_CTXS(perf, dir, off, n) \
     do { \
-        SPLAT_CTX(dir##_skip_ctx[off],      b->skip,          n); \
-        SPLAT_CTX(dir##_txfm_ctx[off],      b->tx,            n); \
-        SPLAT_CTX(dir##_partition_ctx[off], dir##_ctx[b->bs], n); \
+        SPLAT_CTX(pref##dir##_skip_ctx[off],      b->skip,          n); \
+        SPLAT_CTX(pref##dir##_txfm_ctx[off],      b->tx,            n); \
+        SPLAT_CTX(pref##dir##_partition_ctx[off], dir##_ctx[b->bs], n); \
         if (!s->s.h.keyframe && !s->s.h.intraonly) { \
-            SPLAT_CTX(dir##_intra_ctx[off], b->intra,   n); \
-            SPLAT_CTX(dir##_comp_ctx[off],  b->comp,    n); \
-            SPLAT_CTX(dir##_mode_ctx[off],  b->mode[3], n); \
+            SPLAT_CTX(pref##dir##_intra_ctx[off], b->intra,   n); \
+            SPLAT_CTX(pref##dir##_comp_ctx[off],  b->comp,    n); \
+            SPLAT_CTX(pref##dir##_mode_ctx[off],  b->mode[3], n); \
             if (!b->intra) { \
-                SPLAT_CTX(dir##_ref_ctx[off], vref, n); \
+                SPLAT_CTX(pref##dir##_ref_ctx[off], vref, n); \
                 if (s->s.h.filtermode == FILTER_SWITCHABLE) { \
-                    SPLAT_CTX(dir##_filter_ctx[off], filter_id, n); \
+                    SPLAT_CTX(pref##dir##_filter_ctx[off], filter_id, n); \
                 } \
             } \
         } \
     } while (0)
-    case 1: SET_CTXS(s->above, col, 1); break;
-    case 2: SET_CTXS(s->above, col, 2); break;
-    case 4: SET_CTXS(s->above, col, 4); break;
-    case 8: SET_CTXS(s->above, col, 8); break;
+    case 1: SET_CTXS(s->, above, col, 1); break;
+    case 2: SET_CTXS(s->, above, col, 2); break;
+    case 4: SET_CTXS(s->, above, col, 4); break;
+    case 8: SET_CTXS(s->, above, col, 8); break;
     }
     switch (ff_vp9_bwh_tab[1][b->bs][1]) {
-    case 1: SET_CTXS(td->left, row7, 1); break;
-    case 2: SET_CTXS(td->left, row7, 2); break;
-    case 4: SET_CTXS(td->left, row7, 4); break;
-    case 8: SET_CTXS(td->left, row7, 8); break;
+    case 1: SET_CTXS(td->, left, row7, 1); break;
+    case 2: SET_CTXS(td->, left, row7, 2); break;
+    case 4: SET_CTXS(td->, left, row7, 4); break;
+    case 8: SET_CTXS(td->, left, row7, 8); break;
     }
 #undef SPLAT_CTX
 #undef SET_CTXS
