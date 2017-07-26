@@ -170,10 +170,10 @@ static void FN(inter_pred)(VP9TileData *td)
             }
 
             if (b->comp) {
-                mc_luma_dir(s, mc[4][b->filter][1], s->dst[0], ls_y,
+                mc_luma_dir(s, mc[4][b->filter][1], td->dst[0], ls_y,
                             ref2->data[0], ref2->linesize[0], tref2,
                             row << 3, col << 3, &b->mv[0][1],,,,, 4, 8, w2, h2, 1);
-                mc_luma_dir(s, mc[4][b->filter][1], s->dst[0] + 4 * bytesperpixel, ls_y,
+                mc_luma_dir(s, mc[4][b->filter][1], td->dst[0] + 4 * bytesperpixel, ls_y,
                             ref2->data[0], ref2->linesize[0], tref2,
                             row << 3, (col << 3) + 4, &b->mv[1][1],,,,, 4, 8, w2, h2, 1);
                 h2 = (h2 + s->ss_v) >> s->ss_v;
@@ -330,7 +330,7 @@ static void FN(inter_pred)(VP9TileData *td)
                         uvmv = ROUNDED_DIV_MVx4(b->mv[0][1], b->mv[1][1],
                                                 b->mv[2][1], b->mv[3][1]);
                         mc_chroma_dir(s, mc[4][b->filter][1],
-                                      td->dst[1], s->dst[2], ls_uv,
+                                      td->dst[1], td->dst[2], ls_uv,
                                       ref2->data[1], ref2->linesize[1],
                                       ref2->data[2], ref2->linesize[2], tref2,
                                       row << 2, col << 2,
@@ -338,7 +338,7 @@ static void FN(inter_pred)(VP9TileData *td)
                     } else {
                         uvmv = ROUNDED_DIV_MVx2(b->mv[0][1], b->mv[2][1]);
                         mc_chroma_dir(s, mc[4][b->filter][1],
-                                      td->dst[1], s->dst[2], ls_uv,
+                                      td->dst[1], td->dst[2], ls_uv,
                                       ref2->data[1], ref2->linesize[1],
                                       ref2->data[2], ref2->linesize[2], tref2,
                                       row << 2, col << 3,
