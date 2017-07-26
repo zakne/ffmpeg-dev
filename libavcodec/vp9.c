@@ -1379,49 +1379,48 @@ FF_ENABLE_DEPRECATION_WARNINGS
                             tile_row, s->s.h.tiling.log2_tile_rows, s->sb_rows);
 
             for (row = tile_row_start; row < tile_row_end;
-                 row += 8, yoff += ls_y * 64, uvoff += ls_uv * 64 >> s->ss_v) {
+                 row += 8, yoff += ls_y * 64, uvoff += ls_uv * 64 >> s->ss_v);
 
-                VP9Filter *lflvl_ptr = s->lflvl;
-                if (s->pass != 2) {
-                    for (tile_col = 0; tile_col < s->s.h.tiling.tile_cols; tile_col++) {
-                        set_tile_offset(&tile_col_start, &tile_col_end,
-                                        tile_col, s->s.h.tiling.log2_tile_cols, s->sb_cols);
-                        int64_t tile_size;
+            VP9Filter *lflvl_ptr = s->lflvl;
+            if (s->pass != 2) {
+                for (tile_col = 0; tile_col < s->s.h.tiling.tile_cols; tile_col++) {
+                    set_tile_offset(&tile_col_start, &tile_col_end,
+                                    tile_col, s->s.h.tiling.log2_tile_cols, s->sb_cols);
+                    int64_t tile_size;
 
-                        s->td[td_cnt].lflvl_ptr = lflvl_ptr;
-                        for (col = tile_col_start; col < tile_col_end; col += 8,lflvl_ptr++);
+                    s->td[td_cnt].lflvl_ptr = lflvl_ptr;
+                    for (col = tile_col_start; col < tile_col_end; col += 8,lflvl_ptr++);
 
-                        if (tile_col == s->s.h.tiling.tile_cols - 1 &&
-                            tile_row == s->s.h.tiling.tile_rows - 1) {
-                            tile_size = size;
-                        } else {
-                            tile_size = AV_RB32(data);
-                            data += 4;
-                            size -= 4;
-                        }
-                        if (tile_size > size) {
-                            ff_thread_report_progress(&s->s.frames[CUR_FRAME].tf, INT_MAX, 0);
-                            return AVERROR_INVALIDDATA;
-                        }
-                        ret = ff_vp56_init_range_decoder(&s->td[td_cnt].c, data, tile_size);
-                        if (ret < 0)
-                            return ret;
-                        if (vp56_rac_get_prob_branchy(&s->td[td_cnt].c, 128)) { // marker bit
-                            ff_thread_report_progress(&s->s.frames[CUR_FRAME].tf, INT_MAX, 0);
-                            return AVERROR_INVALIDDATA;
-                        }
-                        data += tile_size;
-                        size -= tile_size;
-
-                        s->td[td_cnt].tile_col_start = tile_col_start;
-                        s->td[td_cnt].tile_col_end = tile_col_end; 
-                        s->td[td_cnt].tile_row_start = tile_row_start;
-                        s->td[td_cnt].tile_row_end = tile_row_end;
-                        s->td[td_cnt].yoff = yoff;
-                        s->td[td_cnt].uvoff = uvoff;
-                        s->td[td_cnt].s = s;
-                        td_cnt++;
+                    if (tile_col == s->s.h.tiling.tile_cols - 1 &&
+                        tile_row == s->s.h.tiling.tile_rows - 1) {
+                        tile_size = size;
+                    } else {
+                        tile_size = AV_RB32(data);
+                        data += 4;
+                        size -= 4;
                     }
+                    if (tile_size > size) {
+                        ff_thread_report_progress(&s->s.frames[CUR_FRAME].tf, INT_MAX, 0);
+                        return AVERROR_INVALIDDATA;
+                    }
+                    ret = ff_vp56_init_range_decoder(&s->td[td_cnt].c, data, tile_size);
+                    if (ret < 0)
+                        return ret;
+                    if (vp56_rac_get_prob_branchy(&s->td[td_cnt].c, 128)) { // marker bit
+                        ff_thread_report_progress(&s->s.frames[CUR_FRAME].tf, INT_MAX, 0);
+                        return AVERROR_INVALIDDATA;
+                    }
+                    data += tile_size;
+                    size -= tile_size;
+
+                    s->td[td_cnt].tile_col_start = tile_col_start;
+                    s->td[td_cnt].tile_col_end = tile_col_end; 
+                    s->td[td_cnt].tile_row_start = tile_row_start;
+                    s->td[td_cnt].tile_row_end = tile_row_end;
+                    s->td[td_cnt].yoff = yoff;
+                    s->td[td_cnt].uvoff = uvoff;
+                    s->td[td_cnt].s = s;
+                    td_cnt++;
                 }
             }
         }
