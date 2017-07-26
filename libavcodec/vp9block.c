@@ -726,9 +726,9 @@ static void decode_mode(VP9TileData *td)
             SPLAT_CTX(perf##dir##_comp_ctx[off],  b->comp,    n); \
             SPLAT_CTX(perf##dir##_mode_ctx[off],  b->mode[3], n); \
             if (!b->intra) { \
-                SPLAT_CTX(perf##->dir##_ref_ctx[off], vref, n); \
+                SPLAT_CTX(perf##dir##_ref_ctx[off], vref, n); \
                 if (s->s.h.filtermode == FILTER_SWITCHABLE) { \
-                    SPLAT_CTX(perf##->dir##_filter_ctx[off], filter_id, n); \
+                    SPLAT_CTX(perf##dir##_filter_ctx[off], filter_id, n); \
                 } \
             } \
         } \
