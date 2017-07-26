@@ -220,10 +220,6 @@ static int update_block_buffers(AVCodecContext *avctx)
     if (s->b_base && s->block_base && s->block_alloc_using_2pass == s->s.frames[CUR_FRAME].uses_2pass)
         return 0;
     
-    for (i = 0; i < s->s.h.tiling.tile_cols*s->s.h.tiling.tile_rows; i++) {
-        av_free(s->td[i].b_base);
-        av_free(s->td[i].block_base);
-    }
     chroma_blocks = 64 * 64 >> (s->ss_h + s->ss_v);
     chroma_eobs   = 16 * 16 >> (s->ss_h + s->ss_v);
     if (s->s.frames[CUR_FRAME].uses_2pass) {
