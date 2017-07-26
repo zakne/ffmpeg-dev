@@ -213,6 +213,7 @@ static int update_size(AVCodecContext *avctx, int w, int h)
 
 static int update_block_buffers(AVCodecContext *avctx)
 {
+    int i;
     VP9Context *s = avctx->priv_data;
     int chroma_blocks, chroma_eobs, bytesperpixel = s->bytesperpixel;
 
@@ -240,16 +241,16 @@ static int update_block_buffers(AVCodecContext *avctx)
         s->uveob_base[1] = s->uveob_base[0] + chroma_eobs * sbs;
     } else {
         for (i = 0; i < s->s.h.tiling.tile_cols*s->s.h.tiling.tile_rows; i++) {
-            s->td[i]->b_base = av_malloc(sizeof(VP9Block));
-            s->td[i]->block_base = av_mallocz((64 * 64 + 2 * chroma_blocks) * bytesperpixel * sizeof(int16_t) +
+            s->td[i].b_base = av_malloc(sizeof(VP9Block));
+            s->td[i].block_base = av_mallocz((64 * 64 + 2 * chroma_blocks) * bytesperpixel * sizeof(int16_t) +
                                        16 * 16 + 2 * chroma_eobs);
             if (!s->td[i]->b_base || !s->td[i]->block_base)
                 return AVERROR(ENOMEM);
-            s->td[i]->uvblock_base[0] = s->td[i]->block_base + 64 * 64 * bytesperpixel;
-            s->td[i]->uvblock_base[1] = s->td[i]->uvblock_base[0] + chroma_blocks * bytesperpixel;
-            s->td[i]->eob_base = (uint8_t *) (s->td[i]->uvblock_base[1] + chroma_blocks * bytesperpixel);
-            s->td[i]->uveob_base[0] = s->td[i]->eob_base + 16 * 16;
-            s->td[i]->uveob_base[1] = s->td[i]->uveob_base[0] + chroma_eobs;
+            s->td[i].uvblock_base[0] = s->td[i].block_base + 64 * 64 * bytesperpixel;
+            s->td[i].uvblock_base[1] = s->td[i].uvblock_base[0] + chroma_blocks * bytesperpixel;
+            s->td[i].eob_base = (uint8_t *) (s->td[i].uvblock_base[1] + chroma_blocks * bytesperpixel);
+            s->td[i].uveob_base[0] = s->td[i].eob_base + 16 * 16;
+            s->td[i].uveob_base[1] = s->td[i].uveob_base[0] + chroma_eobs;
         }
     }
     s->block_alloc_using_2pass = s->s.frames[CUR_FRAME].uses_2pass;
@@ -763,10 +764,10 @@ static int decode_frame_header(AVCodecContext *avctx,
     
     for (i = 0; i < s->s.h.tiling.tile_cols*s->s.h.tiling.tile_rows; i++) {
         if (s->s.h.keyframe || s->s.h.intraonly) {
-            memset(s->td[i]->counts.coef, 0, sizeof(s->counts.coef));
-            memset(s->td[i]->counts.eob,  0, sizeof(s->counts.eob));
+            memset(s->td[i].counts.coef, 0, sizeof(s->counts.coef));
+            memset(s->td[i].counts.eob,  0, sizeof(s->counts.eob));
         } else {
-            memset(&s->td[i]->counts, 0, sizeof(s->counts));
+            memset(&s->td[i].counts, 0, sizeof(s->counts));
         }
     }
         
@@ -1135,12 +1136,14 @@ static av_always_inline
 int decode_tiles(AVCodecContext *avctx, void *tdata, int jobnr,
                               int threadnr)
 {
+    int row, col;
     VP9Context *s = avctx->priv_data;
     VP9TileData *td = &s->td[jobnr];
     ptrdiff_t uvoff, yoff, ls_y, ls_uv;
     AVFrame *f;
     uvoff = td->uvoff;
     yoff = td->yoff;
+    int bytesperpixel = s->bytesperpixel;
     
     f = s->s.frames[CUR_FRAME].tf.f;
     ls_y = f->linesize[0];
@@ -1234,8 +1237,8 @@ static int vp9_decode_frame(AVCodecContext *avctx, void *frame,
     int retain_segmap_ref = s->s.frames[REF_FRAME_SEGMAP].segmentation_map &&
                             (!s->s.h.segmentation.enabled || !s->s.h.segmentation.update_map);
     AVFrame *f;
-    int bytesperpixel;
-
+    ptrdiff_t ls_y, ls_uv;
+    
     if ((ret = decode_frame_header(avctx, data, size, &ref)) < 0) {
         return ret;
     } else if (ret == 0) {
@@ -1320,7 +1323,6 @@ FF_ENABLE_DEPRECATION_WARNINGS
     }
 
     // main tile decode loop
-    bytesperpixel = s->bytesperpixel;
     memset(s->above_partition_ctx, 0, s->cols);
     memset(s->above_skip_ctx, 0, s->cols);
     if (s->s.h.keyframe || s->s.h.intraonly) {
@@ -1360,13 +1362,13 @@ FF_ENABLE_DEPRECATION_WARNINGS
 
     do {
         for (i = 0; i < s->s.h.tiling.tile_cols*s->s.h.tiling.tile_rows; i++) {
-            s->td[i]->b = s->td[i]->b_base;
-            s->td[i]->block = s->td[i]->block_base;
-            s->td[i]->uvblock[0] = s->td[i]->uvblock_base[0];
-            s->td[i]->uvblock[1] = s->td[i]->uvblock_base[1];
-            s->td[i]->eob = s->td[i]->eob_base;
-            s->td[i]->uveob[0] = s->td[i]->uveob_base[0];
-            s->td[i]->uveob[1] = s->td[i]->uveob_base[1];
+            s->td[i].b = s->td[i].b_base;
+            s->td[i].block = s->td[i].block_base;
+            s->td[i].uvblock[0] = s->td[i].uvblock_base[0];
+            s->td[i].uvblock[1] = s->td[i].uvblock_base[1];
+            s->td[i].eob = s->td[i].eob_base;
+            s->td[i].uveob[0] = s->td[i].uveob_base[0];
+            s->td[i].uveob[1] = s->td[i].uveob_base[1];
         }
 
         for (tile_row = 0; tile_row < s->s.h.tiling.tile_rows; tile_row++) {
@@ -1383,8 +1385,8 @@ FF_ENABLE_DEPRECATION_WARNINGS
                                     tile_col, s->s.h.tiling.log2_tile_cols, s->sb_cols);
                     int64_t tile_size;
                     
-                    s->td[td_cnt]->s = s;
-                    s->td[td_cnt]->lflvl_ptr = lflvl_ptr;
+                    s->td[td_cnt].s = s;
+                    s->td[td_cnt].lflvl_ptr = lflvl_ptr;
                     for (col = s->td[td_cnt].tile_col_start; col < s->td[td_cnt].tile_col_end; col += 8,lflvl_ptr++);
                     
                     if (tile_col == s->s.h.tiling.tile_cols - 1 &&

@@ -112,7 +112,6 @@ typedef struct VP9Context {
         uint8_t lim_lut[64];
         uint8_t mblim_lut[64];
     } filter_lut;
-    unsigned tile_row_start, tile_row_end, tile_col_start, tile_col_end;
     struct {
         ProbContext p;
         uint8_t coef[4][2][2][6][6][3];
@@ -187,6 +186,7 @@ typedef struct VP9TileData {
     uint8_t *dst[3];
     ptrdiff_t y_stride, uv_stride, yoff, uvoff;
     VP9Block *b_base, *b;
+    unsigned tile_row_start, tile_row_end, tile_col_start, tile_col_end;
     
     struct {
         unsigned y_mode[4][10];
@@ -239,7 +239,7 @@ typedef struct VP9TileData {
     uint8_t *eob_base, *uveob_base[2], *eob, *uveob[2];
 } VP9TileData;
 
-void ff_vp9_fill_mv(VP9Context *s, VP56mv *mv, int mode, int sb);
+void ff_vp9_fill_mv(VP9TileData *td, VP56mv *mv, int mode, int sb);
 
 void ff_vp9_adapt_probs(VP9Context *s);
 
@@ -250,11 +250,11 @@ void ff_vp9_decode_block(VP9TileData *td, int row, int col,
 void ff_vp9_loopfilter_sb(AVCodecContext *avctx, VP9Filter *lflvl,
                           int row, int col, ptrdiff_t yoff, ptrdiff_t uvoff);
 
-void ff_vp9_intra_recon_8bpp(AVCodecContext *avctx,
+void ff_vp9_intra_recon_8bpp(VP9TileData *td,
                              ptrdiff_t y_off, ptrdiff_t uv_off);
-void ff_vp9_intra_recon_16bpp(AVCodecContext *avctx,
+void ff_vp9_intra_recon_16bpp(VP9TileData *td,
                               ptrdiff_t y_off, ptrdiff_t uv_off);
-void ff_vp9_inter_recon_8bpp(AVCodecContext *avctx);
-void ff_vp9_inter_recon_16bpp(AVCodecContext *avctx);
+void ff_vp9_inter_recon_8bpp(VP9TileData *td);
+void ff_vp9_inter_recon_16bpp(VP9TileData *td);
 
 #endif /* AVCODEC_VP9DEC_H */
