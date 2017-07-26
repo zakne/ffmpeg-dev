@@ -718,13 +718,13 @@ static void decode_mode(VP9TileData *td)
     switch (ff_vp9_bwh_tab[1][b->bs][0]) {
 #define SET_CTXS(perf, dir, off, n) \
     do { \
-        SPLAT_CTX(perf##->dir##_skip_ctx[off],      b->skip,          n); \
-        SPLAT_CTX(perf##->dir##_txfm_ctx[off],      b->tx,            n); \
-        SPLAT_CTX(perf##->dir##_partition_ctx[off], dir##_ctx[b->bs], n); \
+        SPLAT_CTX(perf##dir##_skip_ctx[off],      b->skip,          n); \
+        SPLAT_CTX(perf##dir##_txfm_ctx[off],      b->tx,            n); \
+        SPLAT_CTX(perf##dir##_partition_ctx[off], dir##_ctx[b->bs], n); \
         if (!s->s.h.keyframe && !s->s.h.intraonly) { \
-            SPLAT_CTX(perf##->dir##_intra_ctx[off], b->intra,   n); \
-            SPLAT_CTX(perf##->dir##_comp_ctx[off],  b->comp,    n); \
-            SPLAT_CTX(perf##->dir##_mode_ctx[off],  b->mode[3], n); \
+            SPLAT_CTX(perf##dir##_intra_ctx[off], b->intra,   n); \
+            SPLAT_CTX(perf##dir##_comp_ctx[off],  b->comp,    n); \
+            SPLAT_CTX(perf##dir##_mode_ctx[off],  b->mode[3], n); \
             if (!b->intra) { \
                 SPLAT_CTX(perf##->dir##_ref_ctx[off], vref, n); \
                 if (s->s.h.filtermode == FILTER_SWITCHABLE) { \
@@ -733,16 +733,16 @@ static void decode_mode(VP9TileData *td)
             } \
         } \
     } while (0)
-    case 1: SET_CTXS(s, above, col, 1); break;
-    case 2: SET_CTXS(s, above, col, 2); break;
-    case 4: SET_CTXS(s, above, col, 4); break;
-    case 8: SET_CTXS(s, above, col, 8); break;
+    case 1: SET_CTXS(s->, above, col, 1); break;
+    case 2: SET_CTXS(s->, above, col, 2); break;
+    case 4: SET_CTXS(s->, above, col, 4); break;
+    case 8: SET_CTXS(s->, above, col, 8); break;
     }
     switch (ff_vp9_bwh_tab[1][b->bs][1]) {
-    case 1: SET_CTXS(td, left, row7, 1); break;
-    case 2: SET_CTXS(td, left, row7, 2); break;
-    case 4: SET_CTXS(td, left, row7, 4); break;
-    case 8: SET_CTXS(td, left, row7, 8); break;
+    case 1: SET_CTXS(td->, left, row7, 1); break;
+    case 2: SET_CTXS(td->, left, row7, 2); break;
+    case 4: SET_CTXS(td->, left, row7, 4); break;
+    case 8: SET_CTXS(td->, left, row7, 8); break;
     }
 #undef SPLAT_CTX
 #undef SET_CTXS
