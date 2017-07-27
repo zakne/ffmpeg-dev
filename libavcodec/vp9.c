@@ -1232,6 +1232,7 @@ static int vp9_decode_frame(AVCodecContext *avctx, void *frame,
     int ret, tile_row, tile_col, i, ref, row, col, num_jobs;
     int tile_col_start, tile_col_end, tile_row_start, tile_row_end;
     int td_cnt = 0;
+    int bytesperpixel;
     int retain_segmap_ref = s->s.frames[REF_FRAME_SEGMAP].segmentation_map &&
                             (!s->s.h.segmentation.enabled || !s->s.h.segmentation.update_map);
     AVFrame *f;
@@ -1321,6 +1322,7 @@ FF_ENABLE_DEPRECATION_WARNINGS
     }
 
     // main tile decode loop
+    bytesperpixel = s->bytesperpixel;
     memset(s->above_partition_ctx, 0, s->cols);
     memset(s->above_skip_ctx, 0, s->cols);
     if (s->s.h.keyframe || s->s.h.intraonly) {
