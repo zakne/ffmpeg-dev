@@ -219,7 +219,7 @@ static int update_block_buffers(AVCodecContext *avctx)
 
     if (s->b_base && s->block_base && s->block_alloc_using_2pass == s->s.frames[CUR_FRAME].uses_2pass)
         return 0;
-    
+
     chroma_blocks = 64 * 64 >> (s->ss_h + s->ss_v);
     chroma_eobs   = 16 * 16 >> (s->ss_h + s->ss_v);
     if (s->s.frames[CUR_FRAME].uses_2pass) {
@@ -1157,7 +1157,7 @@ int decode_tiles(AVCodecContext *avctx, void *tdata, int jobnr,
         memset(td->left_uv_nnz_ctx, 0, 32);
         memset(td->left_segpred_ctx, 0, 8);
     }
-    
+
     for (row = td->tile_row_start; row < td->tile_row_end;
          row += 8, yoff += ls_y * 64, uvoff += ls_uv * 64 >> s->ss_v) {
         VP9Filter *lflvl_ptr = td->lflvl_ptr;
@@ -1359,7 +1359,7 @@ FF_ENABLE_DEPRECATION_WARNINGS
     }
 
     do {
-        yoff = uvoff =0;
+        yoff = uvoff = 0;
         for (i = 0; i < s->s.h.tiling.tile_cols*s->s.h.tiling.tile_rows; i++) {
             s->td[i].b = s->td[i].b_base;
             s->td[i].block = s->td[i].block_base;
@@ -1373,7 +1373,8 @@ FF_ENABLE_DEPRECATION_WARNINGS
         for (tile_row = 0; tile_row < s->s.h.tiling.tile_rows; tile_row++) {
             set_tile_offset(&tile_row_start, &tile_row_end,
                             tile_row, s->s.h.tiling.log2_tile_rows, s->sb_rows);
-
+            
+            ptrdiff_t yoff2 = yoff, uvoff2 = uvoff;
             VP9Filter *lflvl_ptr = s->lflvl;
             if (s->pass != 2) {
                 for (tile_col = 0; tile_col < s->s.h.tiling.tile_cols; tile_col++) {
@@ -1382,7 +1383,6 @@ FF_ENABLE_DEPRECATION_WARNINGS
                     int64_t tile_size;
 
                     s->td[td_cnt].lflvl_ptr = lflvl_ptr;
-                    for (col = tile_col_start; col < tile_col_end; col += 8,lflvl_ptr++);
 
                     if (tile_col == s->s.h.tiling.tile_cols - 1 &&
                         tile_row == s->s.h.tiling.tile_rows - 1) {
@@ -1410,10 +1410,13 @@ FF_ENABLE_DEPRECATION_WARNINGS
                     s->td[td_cnt].tile_col_end = tile_col_end; 
                     s->td[td_cnt].tile_row_start = tile_row_start;
                     s->td[td_cnt].tile_row_end = tile_row_end;
-                    s->td[td_cnt].yoff = yoff;
-                    s->td[td_cnt].uvoff = uvoff;
+                    s->td[td_cnt].yoff = yoff2;
+                    s->td[td_cnt].uvoff = uvoff2;
                     s->td[td_cnt].s = s;
                     td_cnt++;
+                    for (col = tile_col_start; col < tile_col_end; col += 8,
+                            yoff2 += 64 * bytesperpixel,
+                            uvoff2 += 64 * bytesperpixel >> s->ss_h, lflvl_ptr++);
                 }
                 for (row = tile_row_start; row < tile_row_end;
                  row += 8, yoff += ls_y * 64, uvoff += ls_uv * 64 >> s->ss_v);
