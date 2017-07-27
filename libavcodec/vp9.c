@@ -1187,21 +1187,22 @@ int decode_tiles(AVCodecContext *avctx, void *tdata, int jobnr,
 
         if (s->pass == 1)
             continue;
-
+         */
         // backup pre-loopfilter reconstruction data for intra
         // prediction of next row of sb64s
+        unsigned tiles_cols = td->tile_col_end - td->tile_col_start;
         if (row + 8 < s->rows) {
             memcpy(s->intra_pred_data[0],
-                   f->data[0] + yoff + 63 * ls_y,
-                   8 * s->cols * bytesperpixel);
+                   f->data[0] + yoff + 63 * tiles_cols,
+                   8 * tiles_cols * bytesperpixel);
             memcpy(s->intra_pred_data[1],
-                   f->data[1] + uvoff + ((64 >> s->ss_v) - 1) * ls_uv,
-                   8 * s->cols * bytesperpixel >> s->ss_h);
+                   f->data[1] + uvoff + ((64 >> s->ss_v) - 1) * tiles_cols,
+                   8 * tiles_cols * bytesperpixel >> s->ss_h);
             memcpy(s->intra_pred_data[2],
-                   f->data[2] + uvoff + ((64 >> s->ss_v) - 1) * ls_uv,
-                   8 * s->cols * bytesperpixel >> s->ss_h);
+                   f->data[2] + uvoff + ((64 >> s->ss_v) - 1) * tiles_cols,
+                   8 * tiles_cols * bytesperpixel >> s->ss_h);
         }
-
+        /*
         // loopfilter one row
         if (s->s.h.filter.level) {
             yoff2 = yoff;
