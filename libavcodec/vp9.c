@@ -1198,7 +1198,7 @@ int decode_tiles(AVCodecContext *avctx, void *tdata, int jobnr,
             memcpy(s->intra_pred_data[1] + td->tile_col_start * 8 * bytesperpixel >> s->ss_h,
                    f->data[1] + uvoff2 + ((64 >> s->ss_v) - 1) * ls_uv,
                    8 * tiles_cols * bytesperpixel >> s->ss_h);
-            memcpy(s->intra_pred_data[2] + td->tile_col_start * bytesperpixel >> s->ss_h,
+            memcpy(s->intra_pred_data[2] + td->tile_col_start * 8 * bytesperpixel >> s->ss_h,
                    f->data[2] + uvoff2 + ((64 >> s->ss_v) - 1) * ls_uv,
                    8 * tiles_cols * bytesperpixel >> s->ss_h);
         }
