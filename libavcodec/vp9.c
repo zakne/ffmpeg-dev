@@ -1144,24 +1144,24 @@ int decode_tiles(AVCodecContext *avctx, void *tdata, int jobnr,
     f = s->s.frames[CUR_FRAME].tf.f;
     ls_y = f->linesize[0];
     ls_uv =f->linesize[1];
+    
+    if (s->pass != 2) {
+        memset(td->left_partition_ctx, 0, 8);
+        memset(td->left_skip_ctx, 0, 8);
+        if (s->s.h.keyframe || s->s.h.intraonly) {
+            memset(td->left_mode_ctx, DC_PRED, 16);
+        } else {
+            memset(td->left_mode_ctx, NEARESTMV, 8);
+        }
+        memset(td->left_y_nnz_ctx, 0, 16);
+        memset(td->left_uv_nnz_ctx, 0, 32);
+        memset(td->left_segpred_ctx, 0, 8);
+    }
 
     for (row = td->tile_row_start; row < td->tile_row_end;
          row += 8, yoff += ls_y * 64, uvoff += ls_uv * 64 >> s->ss_v) {
         VP9Filter *lflvl_ptr = td->lflvl_ptr;
         ptrdiff_t yoff2 = yoff, uvoff2 = uvoff;
-        
-        if (s->pass != 2) {
-            memset(td->left_partition_ctx, 0, 8);
-            memset(td->left_skip_ctx, 0, 8);
-            if (s->s.h.keyframe || s->s.h.intraonly) {
-                memset(td->left_mode_ctx, DC_PRED, 16);
-            } else {
-                memset(td->left_mode_ctx, NEARESTMV, 8);
-            }
-            memset(td->left_y_nnz_ctx, 0, 16);
-            memset(td->left_uv_nnz_ctx, 0, 32);
-            memset(td->left_segpred_ctx, 0, 8);
-        }
         
         for (col = td->tile_col_start;
              col < td->tile_col_end;
