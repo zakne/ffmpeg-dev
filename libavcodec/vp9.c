@@ -1140,7 +1140,7 @@ int decode_tiles(AVCodecContext *avctx, void *tdata, int jobnr,
     uvoff = td->uvoff;
     yoff = td->yoff;
     int bytesperpixel = s->bytesperpixel;
-    
+
     f = s->s.frames[CUR_FRAME].tf.f;
     ls_y = f->linesize[0];
     ls_uv =f->linesize[1];
@@ -1149,7 +1149,7 @@ int decode_tiles(AVCodecContext *avctx, void *tdata, int jobnr,
          row += 8, yoff += ls_y * 64, uvoff += ls_uv * 64 >> s->ss_v) {
         VP9Filter *lflvl_ptr = td->lflvl_ptr;
         ptrdiff_t yoff2 = yoff, uvoff2 = uvoff;
-        
+
         if (s->pass != 2) {
             memset(td->left_partition_ctx, 0, 8);
             memset(td->left_skip_ctx, 0, 8);
@@ -1162,7 +1162,7 @@ int decode_tiles(AVCodecContext *avctx, void *tdata, int jobnr,
             memset(td->left_uv_nnz_ctx, 0, 32);
             memset(td->left_segpred_ctx, 0, 8);
         }
-        
+
         for (col = td->tile_col_start;
              col < td->tile_col_end;
              col += 8, yoff2 += 64 * bytesperpixel,
@@ -1181,13 +1181,10 @@ int decode_tiles(AVCodecContext *avctx, void *tdata, int jobnr,
                           yoff2, uvoff2, BL_64X64);
             }
         }
-        /*
-        if (s->pass != 2)
-            memcpy(&s->c_b[tile_col], &s->c, sizeof(s->c));
 
         if (s->pass == 1)
             continue;
-         */
+
         // backup pre-loopfilter reconstruction data for intra
         // prediction of next row of sb64s
         unsigned tiles_cols = td->tile_col_end - td->tile_col_start;
@@ -1202,9 +1199,9 @@ int decode_tiles(AVCodecContext *avctx, void *tdata, int jobnr,
                    f->data[2] + uvoff + ((64 >> s->ss_v) - 1) * ls_uv,
                    8 * tiles_cols * bytesperpixel >> s->ss_h);
         }
-        /*
+
         // loopfilter one row
-        if (s->s.h.filter.level) {
+        if (s->s.h.filter.level && avctx->active_thread_type != FF_THREAD_SLICE) {
             yoff2 = yoff;
             uvoff2 = uvoff;
             lflvl_ptr = s->lflvl;
@@ -1219,7 +1216,7 @@ int decode_tiles(AVCodecContext *avctx, void *tdata, int jobnr,
         // FIXME maybe we can make this more finegrained by running the
         // loopfilter per-block instead of after each sbrow
         // In fact that would also make intra pred left preparation easier?
-        ff_thread_report_progress(&s->s.frames[CUR_FRAME].tf, row >> 3, 0);*/
+        ff_thread_report_progress(&s->s.frames[CUR_FRAME].tf, row >> 3, 0);
     }
     return 0;
 }
@@ -1450,7 +1447,7 @@ FF_ENABLE_DEPRECATION_WARNINGS
                 for (k = 0; k < 4; k++)
                     for (l = 0; l < 4; l++)
                         s->counts.partition[j][k][l] += s->td[i].counts.partition[j][k][l];
-                
+
             for (j = 0; j < 4; j++) {
                 s->counts.mv_joint[j] += s->td[i].counts.mv_joint[j];
                 for (k = 0; k < 10; k++)
@@ -1462,7 +1459,7 @@ FF_ENABLE_DEPRECATION_WARNINGS
                 for (k = 0; k < 2; k++)
                     s->counts.intra[j][k] += s->td[i].counts.intra[j][k];
             }
-            
+
             for (j = 0; j < 2; j++) {
                 for (k = 0; k < 4; k++)
                     s->counts.tx32p[j][k] += s->td[i].counts.tx32p[j][k];
@@ -1473,7 +1470,7 @@ FF_ENABLE_DEPRECATION_WARNINGS
                 for (k = 0; k < 2; k++)
                     s->counts.tx8p[j][k] += s->td[i].counts.tx8p[j][k];
             }
-            
+
             for (j = 0; j < 5; j++) {
                 for (k = 0; k < 2; k++) {
                     s->counts.comp[j][k] += s->td[i].counts.comp[j][k];
@@ -1483,15 +1480,15 @@ FF_ENABLE_DEPRECATION_WARNINGS
                         s->counts.single_ref[j][k][l] += s->td[i].counts.single_ref[j][k][l];
                 }
             }
-            
+
             for (j = 0; j < 7; j++)
                 for (k = 0; k < 4; k++)
                     s->counts.mv_mode[j][k] += s->td[i].counts.mv_mode[j][k];
-            
+
             for (j = 0; j < 3; j++)
                 for (k = 0; k < 2; k++)
                     s->counts.skip[j][k] += s->td[i].counts.skip[j][k];
-            
+
             for (j = 0; j < 2; j++) {
                 for (k = 0; k < 2; k++) {
                     s->counts.mv_comp[j].sign[k] += s->td[i].counts.mv_comp[j].sign[k];
@@ -1502,7 +1499,7 @@ FF_ENABLE_DEPRECATION_WARNINGS
                         s->counts.mv_comp[j].class0_fp[k][l] += s->td[i].counts.mv_comp[j].class0_fp[k][l];
                     }
                 }
-                
+
                 for (k = 0; k < 4; k++)
                     s->counts.mv_comp[j].fp[k] += s->td[i].counts.mv_comp[j].fp[k];
                 
