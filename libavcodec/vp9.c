@@ -1452,15 +1452,15 @@ FF_ENABLE_DEPRECATION_WARNINGS
                         s->counts.partition[j][k][l] += s->td[i].counts.partition[j][k][l];
                 
             for (j = 0; j < 4; j++) {
-                s->counts.counts.mv_joint[j] += s->td[i].counts.mv_joint[j];
+                s->counts.mv_joint[j] += s->td[i].counts.mv_joint[j];
                 for (k = 0; k < 10; k++)
-                    s->counts.counts.y_mode[j][k] += s->td[i].counts.y_mode[j][k];
+                    s->counts.y_mode[j][k] += s->td[i].counts.y_mode[j][k];
                     
                 for (k = 0; k < 3; k++)
-                    s->counts.counts.filter[j][k] += s->td[i].counts.filter[j][k];
+                    s->counts.filter[j][k] += s->td[i].counts.filter[j][k];
                 
                 for (k = 0; k < 2; k++)
-                    s->counts.counts.intra[j][k] += s->td[i].counts.intra[j][k];
+                    s->counts.intra[j][k] += s->td[i].counts.intra[j][k];
             }
             
             for (j = 0; j < 2; j++) {
