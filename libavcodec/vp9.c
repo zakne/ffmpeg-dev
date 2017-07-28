@@ -1232,6 +1232,7 @@ static int vp9_decode_frame(AVCodecContext *avctx, void *frame,
     VP9Context *s = avctx->priv_data;
     int ret, tile_row, tile_col, i, ref, row, col, num_jobs;
     int tile_col_start, tile_col_end, tile_row_start, tile_row_end;
+    int j, k, l, m, n, o, p;
     int td_cnt = 0;
     int bytesperpixel;
     int retain_segmap_ref = s->s.frames[REF_FRAME_SEGMAP].segmentation_map &&
@@ -1451,15 +1452,15 @@ FF_ENABLE_DEPRECATION_WARNINGS
                         s->counts.partition[j][k][l] += s->td[i].counts.partition[j][k][l];
                 
             for (j = 0; j < 4; j++) {
-                s->counts.mv_joint[j] += s->td[i].mv_joint[j];
+                s->counts.counts.mv_joint[j] += s->td[i].counts.mv_joint[j];
                 for (k = 0; k < 10; k++)
-                    s->counts.y_mode[j][k] += s->td[i].y_mode[j][k];
+                    s->counts.counts.y_mode[j][k] += s->td[i].counts.y_mode[j][k];
                     
                 for (k = 0; k < 3; k++)
-                    s->counts.filter[j][k] += s->td[i].filter[j][k];
+                    s->counts.counts.filter[j][k] += s->td[i].counts.filter[j][k];
                 
                 for (k = 0; k < 2; k++)
-                    s->counts.intra[j][k] += s->td[i].intra[j][k];
+                    s->counts.counts.intra[j][k] += s->td[i].counts.intra[j][k];
             }
             
             for (j = 0; j < 2; j++) {
