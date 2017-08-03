@@ -1393,7 +1393,7 @@ FF_ENABLE_DEPRECATION_WARNINGS
     }
 
     for (i = 0; i < 10; i++)
-        m_row[i] = 0;
+        s->m_row[i] = 0;
 
     do {
         yoff = uvoff = 0;
