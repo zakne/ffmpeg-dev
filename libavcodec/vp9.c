@@ -1129,8 +1129,7 @@ static av_cold int vp9_decode_free(AVCodecContext *avctx)
 
 
 static av_always_inline
-int decode_tiles(AVCodecContext *avctx, void *tdata, int jobnr,
-                              int threadnr)
+int decode_tiles(AVCodecContext *avctx, void *tdata, int jobnr, int threadnr)
 {
     int row, col;
     VP9Context *s = avctx->priv_data;
@@ -1200,24 +1199,52 @@ int decode_tiles(AVCodecContext *avctx, void *tdata, int jobnr,
                    8 * tiles_cols * bytesperpixel >> s->ss_h);
         }
 
-        // loopfilter one row
-        if (s->s.h.filter.level && avctx->active_thread_type != FF_THREAD_SLICE) {
-            yoff2 = yoff;
-            uvoff2 = uvoff;
-            lflvl_ptr = s->lflvl;
-            for (col = 0; col < s->cols;
-                 col += 8, yoff2 += 64 * bytesperpixel,
-                 uvoff2 += 64 * bytesperpixel >> s->ss_h, lflvl_ptr++) {
-                ff_vp9_loopfilter_sb(avctx, lflvl_ptr, row, col,
-                                     yoff2, uvoff2);
-            }
+        int row_i;
+        row_i = (jobnr - (jobnr % s.s.h.tiling.tile_cols)) / s.s.h.tiling.tile_cols;
+        
+        pthread_mutex_lock(&s->mutex);
+        m_row[row_i]++;
+        if (jobnr % s.s.h.tiling.tile_cols == 0) {
+            s->cur_lflvl_ptr = td->lflvl_ptr;
+            s->cur_row = row;
+            s->cur_uvoff = uvoff;
+            s->cur_yoff = yoff;
         }
-
+        pthread_mutex_unlock(&s->mutex);
+        if (m_row[row_i] == s.s.h.tiling.tile_cols)
+            pthread_cond_signal(&s->cond);
+        // report that the col is ready
         // FIXME maybe we can make this more finegrained by running the
         // loopfilter per-block instead of after each sbrow
         // In fact that would also make intra pred left preparation easier?
         ff_thread_report_progress(&s->s.frames[CUR_FRAME].tf, row >> 3, 0);
     }
+    return 0;
+}
+
+static int loopfilter_proc(AVCodecContext *avctx) {
+    VP9Context *s = avctx->priv_data;
+    ptrdiff_t uvoff2, yoff2;
+    VP9Filter *lflvl_ptr;
+    int col;
+
+    //while there is data
+    //is row is ready process
+    //loopfilter one row
+    pthread_mutex_lock(&s->mutex);
+    pthread_cond_wait(&s->cond, &s->mutex);
+    if (s->s.h.filter.level) {
+        yoff2 = s->cur_yoff;
+        uvoff2 = s->cur_uvoff;
+        lflvl_ptr = s->cur_lflvl;
+        for (col = 0; col < s->cols;
+             col += 8, yoff2 += 64 * bytesperpixel,
+             uvoff2 += 64 * bytesperpixel >> s->ss_h, lflvl_ptr++) {
+            ff_vp9_loopfilter_sb(avctx, lflvl_ptr, row, col,
+                                 yoff2, uvoff2);
+        }
+    }
+    pthread_mutex_unlock(&s->mutex);
     return 0;
 }
 
@@ -1428,7 +1455,7 @@ FF_ENABLE_DEPRECATION_WARNINGS
         else
             num_jobs = s->s.h.tiling.tile_rows*s->s.h.tiling.tile_cols;
 
-        avctx->execute2(avctx, decode_tiles, s->td, NULL, num_jobs);
+        avctx->execute3(avctx, decode_tiles, loopfilter_proc, s->td, NULL, num_jobs);
 
         for (i = 0; i < s->s.h.tiling.tile_rows*s->s.h.tiling.tile_cols; i++) {
             for (j = 0; j < 4; j++)

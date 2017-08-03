@@ -3233,6 +3233,7 @@ typedef struct AVCodecContext {
      * - decoding: Set by libavcodec, user can override.
      */
     int (*execute2)(struct AVCodecContext *c, int (*func)(struct AVCodecContext *c2, void *arg, int jobnr, int threadnr), void *arg2, int *ret, int count);
+    int (*execute3)(struct AVCodecContext *c, int (*func)(struct AVCodecContext *c2, void *arg, int jobnr, int threadnr), int (*m_func)(struct AVCodecContext *c3), void *arg2, int *ret, int count);
 
     /**
      * noise vs. sse weight for the nsse comparison function

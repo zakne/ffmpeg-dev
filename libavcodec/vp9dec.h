@@ -98,6 +98,14 @@ typedef struct VP9Context {
     VP9Block *b_base, *b;
     int pass;
 
+    pthread_mutex_t mutex;
+    pthread_cond_t cond;
+    int m_row[10];
+
+    int cur_row;
+    ptrdiff_t cur_yoff, cur_uvoff;
+    VP9Filter *cur_lflvl_ptr;
+
     uint8_t ss_h, ss_v;
     uint8_t last_bpp, bpp_index, bytesperpixel;
     uint8_t last_keyframe;
@@ -189,7 +197,7 @@ typedef struct VP9TileData {
     ptrdiff_t y_stride, uv_stride, yoff, uvoff;
     VP9Block *b_base, *b;
     unsigned tile_row_start, tile_row_end, tile_col_start, tile_col_end;
-    
+
     struct {
         unsigned y_mode[4][10];
         unsigned uv_mode[10][10];

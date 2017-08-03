@@ -1345,13 +1345,13 @@ void ff_vp9_decode_block(VP9TileData *td, int row, int col,
         }
 
         if (s->pass == 1) {
-            s->b++;
-            s->block += w4 * h4 * 64 * bytesperpixel;
-            s->uvblock[0] += w4 * h4 * 64 * bytesperpixel >> (s->ss_h + s->ss_v);
-            s->uvblock[1] += w4 * h4 * 64 * bytesperpixel >> (s->ss_h + s->ss_v);
-            s->eob += 4 * w4 * h4;
-            s->uveob[0] += 4 * w4 * h4 >> (s->ss_h + s->ss_v);
-            s->uveob[1] += 4 * w4 * h4 >> (s->ss_h + s->ss_v);
+            td->b++;
+            td->block += w4 * h4 * 64 * bytesperpixel;
+            td->uvblock[0] += w4 * h4 * 64 * bytesperpixel >> (s->ss_h + s->ss_v);
+            td->uvblock[1] += w4 * h4 * 64 * bytesperpixel >> (s->ss_h + s->ss_v);
+            td->eob += 4 * w4 * h4;
+            td->uveob[0] += 4 * w4 * h4 >> (s->ss_h + s->ss_v);
+            td->uveob[1] += 4 * w4 * h4 >> (s->ss_h + s->ss_v);
 
             return;
         }
@@ -1442,12 +1442,12 @@ void ff_vp9_decode_block(VP9TileData *td, int row, int col,
     }
 
     if (s->pass == 2) {
-        s->b++;
-        s->block += w4 * h4 * 64 * bytesperpixel;
-        s->uvblock[0] += w4 * h4 * 64 * bytesperpixel >> (s->ss_v + s->ss_h);
-        s->uvblock[1] += w4 * h4 * 64 * bytesperpixel >> (s->ss_v + s->ss_h);
-        s->eob += 4 * w4 * h4;
-        s->uveob[0] += 4 * w4 * h4 >> (s->ss_v + s->ss_h);
-        s->uveob[1] += 4 * w4 * h4 >> (s->ss_v + s->ss_h);
+        td->b++;
+        td->block += w4 * h4 * 64 * bytesperpixel;
+        td->uvblock[0] += w4 * h4 * 64 * bytesperpixel >> (s->ss_v + s->ss_h);
+        td->uvblock[1] += w4 * h4 * 64 * bytesperpixel >> (s->ss_v + s->ss_h);
+        td->eob += 4 * w4 * h4;
+        td->uveob[0] += 4 * w4 * h4 >> (s->ss_v + s->ss_h);
+        td->uveob[1] += 4 * w4 * h4 >> (s->ss_v + s->ss_h);
     }
 }

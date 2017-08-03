@@ -38,11 +38,13 @@
 
 typedef int (action_func)(AVCodecContext *c, void *arg);
 typedef int (action_func2)(AVCodecContext *c, void *arg, int jobnr, int threadnr);
+typedef int (main_func)(AVCodecContext *c);
 
 typedef struct SliceThreadContext {
     AVSliceThread *thread;
     action_func *func;
     action_func2 *func2;
+    main_func *m_func;
     void *args;
     int *rets;
     int job_size;
@@ -53,6 +55,12 @@ typedef struct SliceThreadContext {
     pthread_cond_t *progress_cond;
     pthread_mutex_t *progress_mutex;
 } SliceThreadContext;
+
+static void main_function(void *priv) {
+    AVCodecContext *avctx = priv;
+    SliceThreadContext *c = avctx->internal->thread_ctx;
+    c->m_func(avctx);
+}
 
 static void worker_func(void *priv, int jobnr, int threadnr, int nb_jobs, int nb_threads)
 {
@@ -98,8 +106,10 @@ static int thread_execute(AVCodecContext *avctx, action_func* func, void *arg, i
     c->args = arg;
     c->func = func;
     c->rets = ret;
-
-    avpriv_slicethread_execute(c->thread, job_count, 0);
+    if (c->m_func)
+        avpriv_slicethread_execute(c->thread, job_count, 1);
+    else
+        avpriv_slicethread_execute(c->thread, job_count, 0);
     return 0;
 }
 
@@ -107,6 +117,14 @@ static int thread_execute2(AVCodecContext *avctx, action_func2* func2, void *arg
 {
     SliceThreadContext *c = avctx->internal->thread_ctx;
     c->func2 = func2;
+    return thread_execute(avctx, NULL, arg, ret, job_count, 0);
+}
+
+static int thread_execute3(AVCodecContext *avctx, action_func2* func2, main_func* m_func, void *arg, int *ret, int job_count)
+{
+    SliceThreadContext *c = avctx->internal->thread_ctx;
+    c->func2 = func2;
+    c->m_func = m_func;
     return thread_execute(avctx, NULL, arg, ret, job_count, 0);
 }
 
@@ -142,7 +160,7 @@ int ff_slice_thread_init(AVCodecContext *avctx)
     }
 
     avctx->internal->thread_ctx = c = av_mallocz(sizeof(*c));
-    if (!c || (thread_count = avpriv_slicethread_create(&c->thread, avctx, worker_func, NULL, thread_count)) <= 1) {
+    if (!c || (thread_count = avpriv_slicethread_create(&c->thread, avctx, worker_func, main_function, thread_count)) <= 1) {
         if (c)
             avpriv_slicethread_free(&c->thread);
         av_freep(&avctx->internal->thread_ctx);
@@ -150,10 +168,12 @@ int ff_slice_thread_init(AVCodecContext *avctx)
         avctx->active_thread_type = 0;
         return 0;
     }
+    c->m_func = NULL;
     avctx->thread_count = thread_count;
 
     avctx->execute = thread_execute;
     avctx->execute2 = thread_execute2;
+    avctx->execute3 = thread_execute3;
     return 0;
 }
 
