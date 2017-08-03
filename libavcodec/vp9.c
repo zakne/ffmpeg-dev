@@ -1407,12 +1407,12 @@ FF_ENABLE_DEPRECATION_WARNINGS
             s->td[i].uveob[1] = s->td[i].uveob_base[1];
         }
 
+        VP9Filter *lflvl_ptr = s->lflvl;
         for (tile_row = 0; tile_row < s->s.h.tiling.tile_rows; tile_row++) {
             set_tile_offset(&tile_row_start, &tile_row_end,
                             tile_row, s->s.h.tiling.log2_tile_rows, s->sb_rows);
 
             ptrdiff_t yoff2 = yoff, uvoff2 = uvoff;
-            VP9Filter *lflvl_ptr = s->lflvl;
             if (s->pass != 2) {
                 for (tile_col = 0; tile_col < s->s.h.tiling.tile_cols; tile_col++) {
                     set_tile_offset(&tile_col_start, &tile_col_end,
