@@ -1200,19 +1200,24 @@ int decode_tiles(AVCodecContext *avctx, void *tdata, int jobnr, int threadnr)
         }
 
         int row_i;
-        row_i = (jobnr - (jobnr % s.s.h.tiling.tile_cols)) / s.s.h.tiling.tile_cols;
+        row_i = (jobnr - (jobnr % s->s.h.tiling.tile_cols)) / s->s.h.tiling.tile_cols;
         
         pthread_mutex_lock(&s->mutex);
         m_row[row_i]++;
+
         if (jobnr % s.s.h.tiling.tile_cols == 0) {
             s->cur_lflvl_ptr = td->lflvl_ptr;
             s->cur_row = row;
             s->cur_uvoff = uvoff;
             s->cur_yoff = yoff;
         }
-        pthread_mutex_unlock(&s->mutex);
-        if (m_row[row_i] == s.s.h.tiling.tile_cols)
+        
+        if (m_row[row_i] == s->s.h.tiling.tile_cols) {
+            m_row[row_i] = 0;
             pthread_cond_signal(&s->cond);
+        }
+        pthread_mutex_unlock(&s->mutex);
+
         // report that the col is ready
         // FIXME maybe we can make this more finegrained by running the
         // loopfilter per-block instead of after each sbrow
@@ -1236,11 +1241,11 @@ static int loopfilter_proc(AVCodecContext *avctx) {
     if (s->s.h.filter.level) {
         yoff2 = s->cur_yoff;
         uvoff2 = s->cur_uvoff;
-        lflvl_ptr = s->cur_lflvl;
+        lflvl_ptr = s->cur_lflvl_ptr;
         for (col = 0; col < s->cols;
              col += 8, yoff2 += 64 * bytesperpixel,
              uvoff2 += 64 * bytesperpixel >> s->ss_h, lflvl_ptr++) {
-            ff_vp9_loopfilter_sb(avctx, lflvl_ptr, row, col,
+            ff_vp9_loopfilter_sb(avctx, lflvl_ptr, s->cur_row, col,
                                  yoff2, uvoff2);
         }
     }
@@ -1385,6 +1390,9 @@ FF_ENABLE_DEPRECATION_WARNINGS
     } else if (!s->s.h.refreshctx) {
         ff_thread_finish_setup(avctx);
     }
+
+    for (i = 0; i < 10; i++)
+        m_row[i] = 0;
 
     do {
         yoff = uvoff = 0;

@@ -28,6 +28,7 @@
 #include <stdint.h>
 
 #include "libavutil/buffer.h"
+#include "libavutil/thread.h"
 #include "libavutil/internal.h"
 
 #include "vp9.h"
