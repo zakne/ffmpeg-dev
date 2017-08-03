@@ -1471,7 +1471,7 @@ FF_ENABLE_DEPRECATION_WARNINGS
         else
             num_jobs = s->s.h.tiling.tile_rows*s->s.h.tiling.tile_cols;
 
-        avctx->execute2(avctx, decode_tiles, s->td, NULL, num_jobs);
+        avctx->execute3(avctx, decode_tiles, loopfilter_proc, s->td, NULL, num_jobs);
 
         for (i = 0; i < s->s.h.tiling.tile_rows*s->s.h.tiling.tile_cols; i++) {
             for (j = 0; j < 4; j++)
