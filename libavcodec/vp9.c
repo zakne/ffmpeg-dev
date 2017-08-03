@@ -1208,13 +1208,13 @@ int decode_tiles(AVCodecContext *avctx, void *tdata, int jobnr, int threadnr)
             s->m_row[0]++;
 
         if (jobnr == 0) {
-            s->cur_lflvl_ptr = td->lflvl_ptr;
+            s->cur_lflvl_ptr = s->lflvl_ptr;
             s->cur_row = td->tile_row_start;
             s->cur_uvoff = td->uvoff;
             s->cur_yoff = td->yoff;
             s->m_row[0]++;
         }
-        
+
         if (s->m_row[0] == 2) {
             s->m_row[0] = 0;
             pthread_cond_signal(&s->cond);
