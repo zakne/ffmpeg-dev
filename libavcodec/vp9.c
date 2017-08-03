@@ -1204,20 +1204,20 @@ int decode_tiles(AVCodecContext *avctx, void *tdata, int jobnr, int threadnr)
         row_i = (jobnr - (jobnr % s->s.h.tiling.tile_cols)) / s->s.h.tiling.tile_cols;
         
         pthread_mutex_lock(&s->mutex);
-        if (jobnr == 1)
-            s->m_row[0]++;
+        s->m_row[row_i]++;
 
-        if (jobnr == 0) {
-            s->cur_lflvl_ptr = s->lflvl_ptr;
+        if ((jobnr%s->s.h.tiling.tile_cols) == 0) {
+            s->cur_lflvl_ptr = td->lflvl_ptr;
             s->cur_row = td->tile_row_start;
             s->cur_uvoff = td->uvoff;
             s->cur_yoff = td->yoff;
-            s->m_row[0]++;
         }
-
-        if (s->m_row[0] == 2) {
-            s->m_row[0] = 0;
+        
+        if (s->m_row[row_i] == s->s.h.tiling.tile_cols) {
+            s->m_row[row_i] = 0;
             pthread_cond_signal(&s->cond);
+            pthread_mutex_unlock(&s->mutex);
+            return 0;
         }
         pthread_mutex_unlock(&s->mutex);
         // FIXME maybe we can make this more finegrained by running the
