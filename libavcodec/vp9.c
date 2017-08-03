@@ -1216,10 +1216,9 @@ int decode_tiles(AVCodecContext *avctx, void *tdata, int jobnr, int threadnr)
         if (s->m_row[row_i] == s->s.h.tiling.tile_cols) {
             s->m_row[row_i] = 0;
             pthread_cond_signal(&s->cond);
-            pthread_mutex_unlock(&s->mutex);
-            return 0;
         }
         pthread_mutex_unlock(&s->mutex);
+        return 0;
         // FIXME maybe we can make this more finegrained by running the
         // loopfilter per-block instead of after each sbrow
         // In fact that would also make intra pred left preparation easier?
