@@ -1225,9 +1225,10 @@ int decode_tiles(AVCodecContext *avctx, void *tdata, int jobnr, int threadnr)
         ff_thread_report_progress(&s->s.frames[CUR_FRAME].tf, row >> 3, 0);
     }
     return 0;
-}
 
-static int loopfilter_proc(AVCodecContext *avctx) {
+}
+static av_always_inline
+int loopfilter_proc(AVCodecContext *avctx) {
     VP9Context *s = avctx->priv_data;
     ptrdiff_t uvoff2, yoff2;
     VP9Filter *lflvl_ptr;
