@@ -177,7 +177,7 @@ static int update_size(AVCodecContext *avctx, int w, int h)
     // FIXME we slightly over-allocate here for subsampled chroma, but a little
     // bit of padding shouldn't affect performance...
     p = av_malloc(s->sb_cols * (128 + 192 * bytesperpixel +
-                                sizeof(*s->lflvl) + 16 * sizeof(*s->above_mv_ctx)));
+                                sizeof(*s->lflvl)*2 + 16 * sizeof(*s->above_mv_ctx)));
     if (!p)
         return AVERROR(ENOMEM);
     assign(s->intra_pred_data[0],  uint8_t *,             64 * bytesperpixel);
@@ -196,7 +196,7 @@ static int update_size(AVCodecContext *avctx, int w, int h)
     assign(s->above_comp_ctx,      uint8_t *,              8);
     assign(s->above_ref_ctx,       uint8_t *,              8);
     assign(s->above_filter_ctx,    uint8_t *,              8);
-    assign(s->lflvl,               VP9Filter *,            1);
+    assign(s->lflvl,               VP9Filter *,            2);
 #undef assign
 
     // these will be re-allocated a little later
@@ -1199,18 +1199,18 @@ int decode_tiles(AVCodecContext *avctx, void *tdata, int jobnr, int threadnr)
                    f->data[2] + uvoff + ((64 >> s->ss_v) - 1) * ls_uv,
                    8 * tiles_cols * bytesperpixel >> s->ss_h);
         }
-
+        //fix from here
         int row_i;
         row_i = (jobnr - (jobnr % s->s.h.tiling.tile_cols)) / s->s.h.tiling.tile_cols;
         
         pthread_mutex_lock(&s->mutex);
         s->m_row[row_i]++;
 
-        if (jobnr % s->s.h.tiling.tile_cols == 0) {
-            s->cur_lflvl_ptr = s->lflvl;
-            s->cur_row = 0;
-            s->cur_uvoff = 0;
-            s->cur_yoff = 0;
+        if ((jobnr%s->s.h.tiling.tile_cols) == 0) {
+            s->cur_lflvl_ptr = td->lflvl_ptr;
+            s->cur_row = td->tile_row_start;
+            s->cur_uvoff = td->uvoff;
+            s->cur_yoff = td->yoff;
         }
         
         if (s->m_row[row_i] == s->s.h.tiling.tile_cols) {
@@ -1232,24 +1232,22 @@ static int loopfilter_proc(AVCodecContext *avctx) {
     VP9Filter *lflvl_ptr;
     int col;
     int bytesperpixel = s->bytesperpixel;
-
-    //while there is data
-    //is row is ready process
+    
     //loopfilter one row
-        pthread_mutex_lock(&s->mutex);
-        pthread_cond_wait(&s->cond, &s->mutex);
-        if (s->s.h.filter.level) {
-            yoff2 = s->cur_yoff;
-            uvoff2 = s->cur_uvoff;
-            lflvl_ptr = s->cur_lflvl_ptr;
-            for (col = 0; col < s->cols;
-                 col += 8, yoff2 += 64 * bytesperpixel,
-                 uvoff2 += 64 * bytesperpixel >> s->ss_h, lflvl_ptr++) {
-                ff_vp9_loopfilter_sb(avctx, lflvl_ptr, s->cur_row, col,
-                                     yoff2, uvoff2);
-            }
+    pthread_mutex_lock(&s->mutex);
+    pthread_cond_wait(&s->cond, &s->mutex);
+    if (s->s.h.filter.level) {
+        yoff2 = s->cur_yoff;
+        uvoff2 = s->cur_uvoff;
+        lflvl_ptr = s->cur_lflvl_ptr;
+        for (col = 0; col < s->cols;
+             col += 8, yoff2 += 64 * bytesperpixel,
+             uvoff2 += 64 * bytesperpixel >> s->ss_h, lflvl_ptr++) {
+            ff_vp9_loopfilter_sb(avctx, lflvl_ptr, s->cur_row, col,
+                                 yoff2, uvoff2);
         }
-        pthread_mutex_unlock(&s->mutex);
+    }
+    pthread_mutex_unlock(&s->mutex);
     return 0;
 }
 
