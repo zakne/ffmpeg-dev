@@ -1225,7 +1225,6 @@ int decode_tiles(AVCodecContext *avctx, void *tdata, int jobnr, int threadnr)
         ff_thread_report_progress(&s->s.frames[CUR_FRAME].tf, row >> 3, 0);
     }
     return 0;
-
 }
 
 static av_always_inline
@@ -1239,7 +1238,20 @@ int loopfilter_proc(AVCodecContext *avctx) {
     //while there is data
     //is row is ready process
     //loopfilter one row
-
+    pthread_mutex_lock(&s->mutex);
+    pthread_cond_wait(&s->cond, &s->mutex);
+    if (s->s.h.filter.level) {
+        yoff2 = s->cur_yoff;
+        uvoff2 = s->cur_uvoff;
+        lflvl_ptr = s->cur_lflvl_ptr;
+        for (col = 0; col < s->cols;
+             col += 8, yoff2 += 64 * bytesperpixel,
+             uvoff2 += 64 * bytesperpixel >> s->ss_h, lflvl_ptr++) {
+            ff_vp9_loopfilter_sb(avctx, lflvl_ptr, s->cur_row, col,
+                                 yoff2, uvoff2);
+        }
+    }
+    pthread_mutex_unlock(&s->mutex);
     return 0;
 }
 
@@ -1453,7 +1465,7 @@ FF_ENABLE_DEPRECATION_WARNINGS
         else
             num_jobs = s->s.h.tiling.tile_rows*s->s.h.tiling.tile_cols;
 
-        avctx->execute2(avctx, decode_tiles, s->td, NULL, num_jobs);
+        avctx->execute3(avctx, decode_tiles, loopfilter_proc, s->td, NULL, num_jobs);
 
         for (i = 0; i < s->s.h.tiling.tile_rows*s->s.h.tiling.tile_cols; i++) {
             for (j = 0; j < 4; j++)
