@@ -125,7 +125,7 @@ static int thread_execute3(AVCodecContext *avctx, action_func2* func2, main_func
 {
     SliceThreadContext *c = avctx->internal->thread_ctx;
     c->func2 = func2;
-    //c->m_func = m_func;
+    c->m_func = m_func;
     return thread_execute(avctx, NULL, arg, ret, job_count, 0);
 }
 

@@ -1227,6 +1227,7 @@ int decode_tiles(AVCodecContext *avctx, void *tdata, int jobnr, int threadnr)
     return 0;
 
 }
+
 static av_always_inline
 int loopfilter_proc(AVCodecContext *avctx) {
     VP9Context *s = avctx->priv_data;
@@ -1238,20 +1239,7 @@ int loopfilter_proc(AVCodecContext *avctx) {
     //while there is data
     //is row is ready process
     //loopfilter one row
-    pthread_mutex_lock(&s->mutex);
-    pthread_cond_wait(&s->cond, &s->mutex);
-    if (s->s.h.filter.level) {
-        yoff2 = s->cur_yoff;
-        uvoff2 = s->cur_uvoff;
-        lflvl_ptr = s->cur_lflvl_ptr;
-        for (col = 0; col < s->cols;
-             col += 8, yoff2 += 64 * bytesperpixel,
-             uvoff2 += 64 * bytesperpixel >> s->ss_h, lflvl_ptr++) {
-            ff_vp9_loopfilter_sb(avctx, lflvl_ptr, s->cur_row, col,
-                                 yoff2, uvoff2);
-        }
-    }
-    pthread_mutex_unlock(&s->mutex);
+
     return 0;
 }
 
