@@ -1214,7 +1214,6 @@ int decode_tiles(AVCodecContext *avctx, void *tdata, int jobnr, int threadnr)
         
         if (s->m_row[row_i] == s->s.h.tiling.tile_cols) {
             s->m_row[row_i] = 0;
-            
         }
         pthread_mutex_unlock(&s->mutex);
         pthread_cond_signal(&s->cond);
