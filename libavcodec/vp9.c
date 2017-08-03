@@ -1203,17 +1203,17 @@ int decode_tiles(AVCodecContext *avctx, void *tdata, int jobnr, int threadnr)
         row_i = (jobnr - (jobnr % s->s.h.tiling.tile_cols)) / s->s.h.tiling.tile_cols;
         
         pthread_mutex_lock(&s->mutex);
-        m_row[row_i]++;
+        s->m_row[row_i]++;
 
-        if (jobnr % s.s.h.tiling.tile_cols == 0) {
+        if (jobnr % s->s.h.tiling.tile_cols == 0) {
             s->cur_lflvl_ptr = td->lflvl_ptr;
             s->cur_row = row;
             s->cur_uvoff = uvoff;
             s->cur_yoff = yoff;
         }
         
-        if (m_row[row_i] == s->s.h.tiling.tile_cols) {
-            m_row[row_i] = 0;
+        if (s->m_row[row_i] == s->s.h.tiling.tile_cols) {
+            s->m_row[row_i] = 0;
             pthread_cond_signal(&s->cond);
         }
         pthread_mutex_unlock(&s->mutex);
@@ -1232,6 +1232,7 @@ static int loopfilter_proc(AVCodecContext *avctx) {
     ptrdiff_t uvoff2, yoff2;
     VP9Filter *lflvl_ptr;
     int col;
+    int bytesperpixel = s->bytesperpixel;
 
     //while there is data
     //is row is ready process
