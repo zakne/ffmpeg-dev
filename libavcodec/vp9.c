@@ -1462,6 +1462,8 @@ FF_ENABLE_DEPRECATION_WARNINGS
                  row += 8, yoff += ls_y * 64, uvoff += ls_uv * 64 >> s->ss_v);
             }
         }
+        
+        ff_slice_thread_init(avctx);
 
         if (avctx->active_thread_type == FF_THREAD_FRAME)
             num_jobs = 1;
