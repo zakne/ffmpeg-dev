@@ -1237,7 +1237,7 @@ static int loopfilter_proc(AVCodecContext *avctx) {
     //while there is data
     //is row is ready process
     //loopfilter one row
-    while (true) {
+    while (1) {
         pthread_mutex_lock(&s->mutex);
         pthread_cond_wait(&s->cond, &s->mutex);
         if (s->s.h.filter.level) {
