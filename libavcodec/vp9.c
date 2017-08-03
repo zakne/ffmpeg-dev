@@ -1464,8 +1464,6 @@ FF_ENABLE_DEPRECATION_WARNINGS
             }
         }
         
-        ff_slice_thread_init(avctx);
-
         if (avctx->active_thread_type == FF_THREAD_FRAME)
             num_jobs = 1;
         else
