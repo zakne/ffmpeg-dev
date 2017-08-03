@@ -117,6 +117,7 @@ static int init_context_defaults(AVCodecContext *s, const AVCodec *codec)
     s->get_format          = avcodec_default_get_format;
     s->execute             = avcodec_default_execute;
     s->execute2            = avcodec_default_execute2;
+    s->execute3            = avcodec_default_execute3;
     s->sample_aspect_ratio = (AVRational){0,1};
     s->pix_fmt             = AV_PIX_FMT_NONE;
     s->sw_pix_fmt          = AV_PIX_FMT_NONE;
