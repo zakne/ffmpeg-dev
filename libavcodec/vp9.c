@@ -1396,6 +1396,9 @@ FF_ENABLE_DEPRECATION_WARNINGS
 
     for (i = 0; i < 10; i++)
         s->m_row[i] = 0;
+    
+    pthread_mutex_init(&s->mutex, NULL);
+    pthread_cond_init(&s->cond, NULL);
 
     do {
         yoff = uvoff = 0;
