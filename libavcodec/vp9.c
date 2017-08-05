@@ -177,7 +177,7 @@ static int update_size(AVCodecContext *avctx, int w, int h)
     // FIXME we slightly over-allocate here for subsampled chroma, but a little
     // bit of padding shouldn't affect performance...
     p = av_malloc(s->sb_cols * (128 + 192 * bytesperpixel +
-                                sizeof(*s->lflvl)*4 + 16 * sizeof(*s->above_mv_ctx)));
+                                s->sb_rows*sizeof(*s->lflvl) + 16 * sizeof(*s->above_mv_ctx)));
     if (!p)
         return AVERROR(ENOMEM);
     assign(s->intra_pred_data[0],  uint8_t *,             64 * bytesperpixel);
@@ -196,7 +196,7 @@ static int update_size(AVCodecContext *avctx, int w, int h)
     assign(s->above_comp_ctx,      uint8_t *,              8);
     assign(s->above_ref_ctx,       uint8_t *,              8);
     assign(s->above_filter_ctx,    uint8_t *,              8);
-    assign(s->lflvl,               VP9Filter *,            4);
+    assign(s->lflvl,               VP9Filter *,            s->sb_rows);
 #undef assign
 
     // these will be re-allocated a little later
@@ -1135,8 +1135,6 @@ int decode_tiles(AVCodecContext *avctx, void *tdata, int jobnr, int threadnr)
     int row, col;
     VP9Context *s = avctx->priv_data;
     VP9TileData *td = &s->td[jobnr];
-    VP9Filter *lflvl_ptr2 = td->lflvl_ptr + s->sb_cols;
-    VP9Filter *tmp;
     ptrdiff_t uvoff, yoff, ls_y, ls_uv;
     AVFrame *f;
     uvoff = td->uvoff;
@@ -1146,12 +1144,12 @@ int decode_tiles(AVCodecContext *avctx, void *tdata, int jobnr, int threadnr)
     f = s->s.frames[CUR_FRAME].tf.f;
     ls_y = f->linesize[0];
     ls_uv =f->linesize[1];
-
+    
+    VP9Filter *lflvl_ptr = td->lflvl_ptr;
     for (row = td->tile_row_start; row < td->tile_row_end;
          row += 8, yoff += ls_y * 64, uvoff += ls_uv * 64 >> s->ss_v) {
-        VP9Filter *lflvl_ptr = td->lflvl_ptr;
         ptrdiff_t yoff2 = yoff, uvoff2 = uvoff;
-
+        lflvl_ptr += sb_rows;
         if (s->pass != 2) {
             memset(td->left_partition_ctx, 0, 8);
             memset(td->left_skip_ctx, 0, 8);
@@ -1217,9 +1215,6 @@ int decode_tiles(AVCodecContext *avctx, void *tdata, int jobnr, int threadnr)
             pthread_cond_signal(&s->cond);
         }
         pthread_mutex_unlock(&s->mutex);
-        tmp = td->lflvl_ptr;
-        td->lflvl_ptr = lflvl_ptr2;
-        lflvl_ptr2 = tmp;
         // FIXME maybe we can make this more finegrained by running the
         // loopfilter per-block instead of after each sbrow
         // In fact that would also make intra pred left preparation easier?
@@ -1455,7 +1450,7 @@ FF_ENABLE_DEPRECATION_WARNINGS
                     }
                     data += tile_size;
                     size -= tile_size;
-                    
+
                     s->td[td_cnt].tile_col_start = tile_col_start;
                     s->td[td_cnt].tile_col_end = tile_col_end; 
                     s->td[td_cnt].tile_row_start = tile_row_start;
