@@ -102,6 +102,9 @@ typedef struct VP9Context {
     pthread_mutex_t mutex;
     pthread_cond_t cond;
     int m_row[10];
+    int row_ready;
+    int end_m;
+    int end;
 
     int cur_row;
     ptrdiff_t cur_yoff, cur_uvoff;
