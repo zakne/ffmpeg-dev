@@ -1407,6 +1407,8 @@ FF_ENABLE_DEPRECATION_WARNINGS
         s->m_row[i] = 0;
     
     s->row_ready = 0;
+    s->end_m = 0;
+    s->end = 0;
     pthread_mutex_init(&s->mutex, NULL);
     pthread_cond_init(&s->cond, NULL);
 
