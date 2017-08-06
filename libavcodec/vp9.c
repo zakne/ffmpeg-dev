@@ -1217,19 +1217,21 @@ int decode_tiles(AVCodecContext *avctx, void *tdata, int jobnr, int threadnr)
             pthread_cond_signal(&s->cond);
         }
         pthread_mutex_unlock(&s->mutex);
-        return 0;
+        tmp = td->lflvl_ptr;
+        td->lflvl_ptr = lflvl_ptr2;
+        lflvl_ptr2 = tmp;
         // FIXME maybe we can make this more finegrained by running the
         // loopfilter per-block instead of after each sbrow
         // In fact that would also make intra pred left preparation easier?
         ff_thread_report_progress(&s->s.frames[CUR_FRAME].tf, row >> 3, 0);
-    }/*
+    }
     pthread_mutex_lock(&s->mutex);
     s->end_m++;
     if (s->end_m == avctx->thread_count) {
         s->end = 1;
         pthread_cond_signal(&s->cond);
     }
-    pthread_mutex_unlock(&s->mutex);*/
+    pthread_mutex_unlock(&s->mutex);
     //report end
     return 0;
 }
@@ -1240,7 +1242,7 @@ static int loopfilter_proc(AVCodecContext *avctx) {
     VP9Filter *lflvl_ptr;
     int col;
     int bytesperpixel = s->bytesperpixel;
-    //do {
+    do {
         //loopfilter one row
         pthread_mutex_lock(&s->mutex);
         while (!s->row_ready)
@@ -1259,7 +1261,7 @@ static int loopfilter_proc(AVCodecContext *avctx) {
         }
         s->row_ready = 0;
         pthread_mutex_unlock(&s->mutex);
-    //} while (!s->end);
+    } while (!s->end);
     return 0;
 }
 
