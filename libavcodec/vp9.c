@@ -1234,8 +1234,9 @@ static int loopfilter_proc(AVCodecContext *avctx) {
     VP9Filter *lflvl_ptr;
     int col;
     int bytesperpixel = s->bytesperpixel;
-
+    int i;
     //loopfilter one row
+    for(i = 0; i < 2; i++) {
     pthread_mutex_lock(&s->mutex);
     while (!s->row_ready)
         pthread_cond_wait(&s->cond, &s->mutex);
@@ -1253,6 +1254,7 @@ static int loopfilter_proc(AVCodecContext *avctx) {
     }
     s->row_ready = 0;
     pthread_mutex_unlock(&s->mutex);
+    }
     return 0;
 }
 
