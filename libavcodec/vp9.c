@@ -1210,8 +1210,8 @@ int decode_tiles(AVCodecContext *avctx, void *tdata, int jobnr, int threadnr)
         if (s->m_row[row_i] == s->s.h.tiling.tile_cols) {
             s->cur_lflvl_ptr = s->td[row_i*s->s.h.tiling.tile_cols].lflvl_ptr;
             s->cur_row = s->td[row_i*s->s.h.tiling.tile_cols].tile_row_start+row;
-            s->cur_uvoff = s->td[row_i*s->s.h.tiling.tile_cols].uvoff+(ls_uv * 64 >> s->ss_v)*(row/8);
-            s->cur_yoff = s->td[row_i*s->s.h.tiling.tile_cols].yoff+(ls_y * 64)*(row/8);
+            s->cur_uvoff = s->td[row_i*s->s.h.tiling.tile_cols].uvoff+(row/8);
+            s->cur_yoff = s->td[row_i*s->s.h.tiling.tile_cols].yoff+(row/8);
             s->m_row[row_i] = 0;
             s->row_ready = 1;
             pthread_cond_signal(&s->cond);
