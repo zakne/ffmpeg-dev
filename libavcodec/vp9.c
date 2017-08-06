@@ -1209,9 +1209,9 @@ int decode_tiles(AVCodecContext *avctx, void *tdata, int jobnr, int threadnr)
         s->m_row[row_i]++;
         if (s->m_row[row_i] == s->s.h.tiling.tile_cols) {
             s->cur_lflvl_ptr = s->td[row_i*s->s.h.tiling.tile_cols].lflvl_ptr;
-            s->cur_row = row;
-            s->cur_uvoff = (ls_uv * 64 >> s->ss_v)*(row/8);
-            s->cur_yoff = (ls_y * 64)*(row/8);
+            s->cur_row = s->td[row_i*s->s.h.tiling.tile_cols].tile_row_start+row;
+            s->cur_uvoff = s->td[row_i*s->s.h.tiling.tile_cols].uvoff+(ls_uv * 64 >> s->ss_v)*(row/8);
+            s->cur_yoff = s->td[row_i*s->s.h.tiling.tile_cols].yoff+(ls_y * 64)*(row/8);
             s->m_row[row_i] = 0;
             s->row_ready = 1;
             pthread_cond_signal(&s->cond);
@@ -1237,23 +1237,23 @@ static int loopfilter_proc(AVCodecContext *avctx) {
     int i;
     //loopfilter one row
     for(i = 0; i < 2; i++) {
-    pthread_mutex_lock(&s->mutex);
-    while (!s->row_ready)
-        pthread_cond_wait(&s->cond, &s->mutex);
+        pthread_mutex_lock(&s->mutex);
+        while (!s->row_ready)
+            pthread_cond_wait(&s->cond, &s->mutex);
 
-    if (s->s.h.filter.level) {
-        yoff2 = s->cur_yoff;
-        uvoff2 = s->cur_uvoff;
-        lflvl_ptr = s->cur_lflvl_ptr;
-        for (col = 0; col < s->cols;
-             col += 8, yoff2 += 64 * bytesperpixel,
-             uvoff2 += 64 * bytesperpixel >> s->ss_h, lflvl_ptr++) {
-            ff_vp9_loopfilter_sb(avctx, lflvl_ptr, s->cur_row, col,
-                                 yoff2, uvoff2);
+        if (s->s.h.filter.level) {
+            yoff2 = s->cur_yoff;
+            uvoff2 = s->cur_uvoff;
+            lflvl_ptr = s->cur_lflvl_ptr;
+            for (col = 0; col < s->cols;
+                 col += 8, yoff2 += 64 * bytesperpixel,
+                 uvoff2 += 64 * bytesperpixel >> s->ss_h, lflvl_ptr++) {
+                ff_vp9_loopfilter_sb(avctx, lflvl_ptr, s->cur_row, col,
+                                     yoff2, uvoff2);
+            }
         }
-    }
-    s->row_ready = 0;
-    pthread_mutex_unlock(&s->mutex);
+        s->row_ready = 0;
+        pthread_mutex_unlock(&s->mutex);
     }
     return 0;
 }
