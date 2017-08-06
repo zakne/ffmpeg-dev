@@ -1242,12 +1242,16 @@ static int loopfilter_proc(AVCodecContext *avctx) {
     VP9Filter *lflvl_ptr;
     int col;
     int bytesperpixel = s->bytesperpixel;
-    do {
+    while (1) {
         //loopfilter one row
         pthread_mutex_lock(&s->mutex);
         while (!s->row_ready)
             pthread_cond_wait(&s->cond, &s->mutex);
         
+        if (s->end) {
+            pthread_mutex_unlock(&s->mutex);
+            break;
+        }
         if (s->s.h.filter.level) {
             yoff2 = s->cur_yoff;
             uvoff2 = s->cur_uvoff;
@@ -1261,7 +1265,7 @@ static int loopfilter_proc(AVCodecContext *avctx) {
         }
         s->row_ready = 0;
         pthread_mutex_unlock(&s->mutex);
-    } while (!s->end);
+    } 
     return 0;
 }
 
