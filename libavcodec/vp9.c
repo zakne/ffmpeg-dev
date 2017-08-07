@@ -1190,13 +1190,13 @@ int decode_tiles(AVCodecContext *avctx, void *tdata, int jobnr, int threadnr)
         unsigned tiles_cols = td->tile_col_end - td->tile_col_start;
         if (row + 8 < s->rows) {
             memcpy(s->intra_pred_data[0] + (td->tile_col_start * 8 * bytesperpixel),
-                   f->data[0] + yoff + 63 * ls_y,
+                   f->data[0] + td->yoff + 63 * ls_y,
                    8 * tiles_cols * bytesperpixel);
             memcpy(s->intra_pred_data[1] + (td->tile_col_start * 8 * bytesperpixel >> s->ss_h),
-                   f->data[1] + uvoff + ((64 >> s->ss_v) - 1) * ls_uv,
+                   f->data[1] + td->uvoff + ((64 >> s->ss_v) - 1) * ls_uv,
                    8 * tiles_cols * bytesperpixel >> s->ss_h);
             memcpy(s->intra_pred_data[2] + (td->tile_col_start * 8 * bytesperpixel >> s->ss_h),
-                   f->data[2] + uvoff + ((64 >> s->ss_v) - 1) * ls_uv,
+                   f->data[2] + td->uvoff + ((64 >> s->ss_v) - 1) * ls_uv,
                    8 * tiles_cols * bytesperpixel >> s->ss_h);
         }
 
