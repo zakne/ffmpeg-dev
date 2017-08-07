@@ -1139,8 +1139,6 @@ int decode_tiles(AVCodecContext *avctx, void *tdata, int jobnr, int threadnr)
     VP9Filter *tmp;
     ptrdiff_t ls_y, ls_uv;
     AVFrame *f;
-    uvoff = td->uvoff;
-    yoff = td->yoff;
     int bytesperpixel = s->bytesperpixel;
 
     f = s->s.frames[CUR_FRAME].tf.f;
