@@ -1216,7 +1216,7 @@ int decode_tiles(AVCodecContext *avctx, void *tdata, int jobnr,
         // FIXME maybe we can make this more finegrained by running the
         // loopfilter per-block instead of after each sbrow
         // In fact that would also make intra pred left preparation easier?
-        ff_thread_report_progress(&s->s.frames[CUR_FRAME].tf, row >> 3, 0);
+        //ff_thread_report_progress(&s->s.frames[CUR_FRAME].tf, row >> 3, 0);
     }
     return 0;
 }
