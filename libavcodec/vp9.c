@@ -1429,7 +1429,7 @@ FF_ENABLE_DEPRECATION_WARNINGS
             num_jobs = s->s.h.tiling.tile_rows*s->s.h.tiling.tile_cols;
 
         avctx->execute2(avctx, decode_tiles, s->td, NULL, num_jobs);
-
+        /*
         for (i = 0; i < s->s.h.tiling.tile_rows*s->s.h.tiling.tile_cols; i++) {
             for (j = 0; j < 4; j++)
                 for (k = 0; k < 2; k++)
@@ -1515,7 +1515,7 @@ FF_ENABLE_DEPRECATION_WARNINGS
         if (s->pass < 2 && s->s.h.refreshctx && !s->s.h.parallelmode) {
             ff_vp9_adapt_probs(s);
             ff_thread_finish_setup(avctx);
-        }
+        }*/
     } while (s->pass++ == 1);
     ff_thread_report_progress(&s->s.frames[CUR_FRAME].tf, INT_MAX, 0);
 
