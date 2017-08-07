@@ -1139,6 +1139,8 @@ int decode_tiles(AVCodecContext *avctx, void *tdata, int jobnr, int threadnr)
     VP9Filter *tmp;
     ptrdiff_t ls_y, ls_uv;
     AVFrame *f;
+    uvoff = td->uvoff;
+    yoff = td->yoff;
     int bytesperpixel = s->bytesperpixel;
 
     f = s->s.frames[CUR_FRAME].tf.f;
@@ -1232,9 +1234,7 @@ static int loopfilter_proc(AVCodecContext *avctx) {
     VP9Filter *lflvl_ptr;
     int col;
     int bytesperpixel = s->bytesperpixel;
-    int i;
     //loopfilter one row
-    for(i = 0; i < 2; i++) {
         pthread_mutex_lock(&s->mutex);
         while (!s->row_ready)
             pthread_cond_wait(&s->cond, &s->mutex);
@@ -1252,7 +1252,6 @@ static int loopfilter_proc(AVCodecContext *avctx) {
         }
         s->row_ready = 0;
         pthread_mutex_unlock(&s->mutex);
-    }
     return 0;
 }
 
