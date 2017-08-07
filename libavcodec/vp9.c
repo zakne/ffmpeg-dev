@@ -1209,7 +1209,7 @@ int decode_tiles(AVCodecContext *avctx, void *tdata, int jobnr, int threadnr)
         s->m_row[row_i]++;
         if (s->m_row[row_i] == s->s.h.tiling.tile_cols) {
             s->cur_lflvl_ptr = s->td[row_i*s->s.h.tiling.tile_cols].lflvl_ptr;
-            s->cur_row = row;
+            s->cur_row = s->td[row_i*s->s.h.tiling.tile_cols].tile_row_start;
             s->cur_uvoff = s->td[row_i*s->s.h.tiling.tile_cols].uvoff;
             s->cur_yoff = s->td[row_i*s->s.h.tiling.tile_cols].yoff;
             s->m_row[row_i] = 0;
