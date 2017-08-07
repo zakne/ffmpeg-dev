@@ -1137,10 +1137,8 @@ int decode_tiles(AVCodecContext *avctx, void *tdata, int jobnr, int threadnr)
     VP9TileData *td = &s->td[jobnr];
     VP9Filter *lflvl_ptr2 = td->lflvl_ptr + s->sb_cols*2;
     VP9Filter *tmp;
-    ptrdiff_t uvoff, yoff, ls_y, ls_uv;
+    ptrdiff_t ls_y, ls_uv;
     AVFrame *f;
-    uvoff = td->uvoff;
-    yoff = td->yoff;
     int bytesperpixel = s->bytesperpixel;
 
     f = s->s.frames[CUR_FRAME].tf.f;
@@ -1148,9 +1146,9 @@ int decode_tiles(AVCodecContext *avctx, void *tdata, int jobnr, int threadnr)
     ls_uv =f->linesize[1];
 
     for (row = td->tile_row_start; row < td->tile_row_end;
-         row += 8, yoff += ls_y * 64, uvoff += ls_uv * 64 >> s->ss_v) {
+         row += 8, td->yoff += ls_y * 64, td->uvoff += ls_uv * 64 >> s->ss_v) {
         VP9Filter *lflvl_ptr = td->lflvl_ptr;
-        ptrdiff_t yoff2 = yoff, uvoff2 = uvoff;
+        ptrdiff_t yoff2 = td->yoff, uvoff2 = td->uvoff;
 
         if (s->pass != 2) {
             memset(td->left_partition_ctx, 0, 8);
@@ -1208,10 +1206,10 @@ int decode_tiles(AVCodecContext *avctx, void *tdata, int jobnr, int threadnr)
         pthread_mutex_lock(&s->mutex);
         s->m_row[row_i]++;
         if (s->m_row[row_i] == s->s.h.tiling.tile_cols) {
-            s->cur_lflvl_ptr = s->lflvl_ptr;
-            s->cur_row = 0;
-            s->cur_uvoff = 0;
-            s->cur_yoff = 0;
+            s->cur_lflvl_ptr = s->td[row_i*s->s.h.tiling.tile_cols].lflvl_ptr;
+            s->cur_row = row;
+            s->cur_uvoff = s->td[row_i*s->s.h.tiling.tile_cols].uvoff;
+            s->cur_yoff = s->td[row_i*s->s.h.tiling.tile_cols].yoff;
             s->m_row[row_i] = 0;
             s->row_ready = 1;
             pthread_cond_signal(&s->cond);
