@@ -1217,9 +1217,6 @@ int decode_tiles(AVCodecContext *avctx, void *tdata, int jobnr, int threadnr)
             pthread_cond_signal(&s->cond);
         }
         pthread_mutex_unlock(&s->mutex);
-        tmp = td->lflvl_ptr;
-        td->lflvl_ptr = lflvl_ptr2;
-        lflvl_ptr2 = tmp;
         return 0;
         // FIXME maybe we can make this more finegrained by running the
         // loopfilter per-block instead of after each sbrow
