@@ -1199,7 +1199,7 @@ int decode_tiles(AVCodecContext *avctx, void *tdata, int jobnr,
                    f->data[2] + uvoff + ((64 >> s->ss_v) - 1) * ls_uv,
                    8 * tiles_cols * bytesperpixel >> s->ss_h);
         }
-
+        /*
         // loopfilter one row
         if (s->s.h.filter.level && avctx->active_thread_type != FF_THREAD_SLICE) {
             yoff2 = yoff;
@@ -1211,7 +1211,7 @@ int decode_tiles(AVCodecContext *avctx, void *tdata, int jobnr,
                 ff_vp9_loopfilter_sb(avctx, lflvl_ptr, row, col,
                                      yoff2, uvoff2);
             }
-        }
+        }*/
 
         // FIXME maybe we can make this more finegrained by running the
         // loopfilter per-block instead of after each sbrow
@@ -1426,7 +1426,7 @@ FF_ENABLE_DEPRECATION_WARNINGS
         if (avctx->active_thread_type == FF_THREAD_FRAME)
             num_jobs = 1;
         else
-            num_jobs = avctx->thread_count;
+            num_jobs = FFMIN(avctx->thread_count, s->s.h.tiling.tile_rows*s->s.h.tiling.tile_cols);
 
         avctx->execute2(avctx, decode_tiles, s->td, NULL, num_jobs);
 
