@@ -1135,8 +1135,6 @@ int decode_tiles(AVCodecContext *avctx, void *tdata, int jobnr, int threadnr)
     int row, col;
     VP9Context *s = avctx->priv_data;
     VP9TileData *td = &s->td[jobnr];
-    VP9Filter *lflvl_ptr2 = td->lflvl_ptr + s->sb_cols*2;
-    VP9Filter *tmp;
     ptrdiff_t uvoff, yoff, ls_y, ls_uv;
     AVFrame *f;
     uvoff = td->uvoff;
@@ -1217,7 +1215,6 @@ int decode_tiles(AVCodecContext *avctx, void *tdata, int jobnr, int threadnr)
             pthread_cond_signal(&s->cond);
         }
         pthread_mutex_unlock(&s->mutex);
-        return 0;
         // FIXME maybe we can make this more finegrained by running the
         // loopfilter per-block instead of after each sbrow
         // In fact that would also make intra pred left preparation easier?
@@ -1232,25 +1229,6 @@ static int loopfilter_proc(AVCodecContext *avctx) {
     VP9Filter *lflvl_ptr;
     int col;
     int bytesperpixel = s->bytesperpixel;
-    int i;
-    //loopfilter one row
-        pthread_mutex_lock(&s->mutex);
-        while (!s->row_ready)
-            pthread_cond_wait(&s->cond, &s->mutex);
-
-        if (s->s.h.filter.level) {
-            yoff2 = s->cur_yoff;
-            uvoff2 = s->cur_uvoff;
-            lflvl_ptr = s->cur_lflvl_ptr;
-            for (col = 0; col < s->cols;
-                 col += 8, yoff2 += 64 * bytesperpixel,
-                 uvoff2 += 64 * bytesperpixel >> s->ss_h, lflvl_ptr++) {
-                ff_vp9_loopfilter_sb(avctx, lflvl_ptr, s->cur_row, col,
-                                     yoff2, uvoff2);
-            }
-        }
-        s->row_ready = 0;
-        pthread_mutex_unlock(&s->mutex);
     return 0;
 }
 
