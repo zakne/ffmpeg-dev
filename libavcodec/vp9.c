@@ -1137,8 +1137,10 @@ int decode_tiles(AVCodecContext *avctx, void *tdata, int jobnr, int threadnr)
     VP9TileData *td = &s->td[jobnr];
     VP9Filter *lflvl_ptr2 = td->lflvl_ptr + s->sb_cols*2;
     VP9Filter *tmp;
-    ptrdiff_t ls_y, ls_uv;
+    ptrdiff_t uvoff, yoff, ls_y, ls_uv;
     AVFrame *f;
+    uvoff = td->uvoff;
+    yoff = td->yoff;
     int bytesperpixel = s->bytesperpixel;
 
     f = s->s.frames[CUR_FRAME].tf.f;
@@ -1146,9 +1148,9 @@ int decode_tiles(AVCodecContext *avctx, void *tdata, int jobnr, int threadnr)
     ls_uv =f->linesize[1];
 
     for (row = td->tile_row_start; row < td->tile_row_end;
-         row += 8, td->yoff += ls_y * 64, td->uvoff += ls_uv * 64 >> s->ss_v) {
+         row += 8, yoff += ls_y * 64, uvoff += ls_uv * 64 >> s->ss_v) {
         VP9Filter *lflvl_ptr = td->lflvl_ptr;
-        ptrdiff_t yoff2 = td->yoff, uvoff2 = td->uvoff;
+        ptrdiff_t yoff2 = yoff, uvoff2 = uvoff;
 
         if (s->pass != 2) {
             memset(td->left_partition_ctx, 0, 8);
@@ -1190,13 +1192,13 @@ int decode_tiles(AVCodecContext *avctx, void *tdata, int jobnr, int threadnr)
         unsigned tiles_cols = td->tile_col_end - td->tile_col_start;
         if (row + 8 < s->rows) {
             memcpy(s->intra_pred_data[0] + (td->tile_col_start * 8 * bytesperpixel),
-                   f->data[0] + td->yoff + 63 * ls_y,
+                   f->data[0] + yoff + 63 * ls_y,
                    8 * tiles_cols * bytesperpixel);
             memcpy(s->intra_pred_data[1] + (td->tile_col_start * 8 * bytesperpixel >> s->ss_h),
-                   f->data[1] + td->uvoff + ((64 >> s->ss_v) - 1) * ls_uv,
+                   f->data[1] + uvoff + ((64 >> s->ss_v) - 1) * ls_uv,
                    8 * tiles_cols * bytesperpixel >> s->ss_h);
             memcpy(s->intra_pred_data[2] + (td->tile_col_start * 8 * bytesperpixel >> s->ss_h),
-                   f->data[2] + td->uvoff + ((64 >> s->ss_v) - 1) * ls_uv,
+                   f->data[2] + uvoff + ((64 >> s->ss_v) - 1) * ls_uv,
                    8 * tiles_cols * bytesperpixel >> s->ss_h);
         }
 
@@ -1218,6 +1220,7 @@ int decode_tiles(AVCodecContext *avctx, void *tdata, int jobnr, int threadnr)
         tmp = td->lflvl_ptr;
         td->lflvl_ptr = lflvl_ptr2;
         lflvl_ptr2 = tmp;
+        return 0;
         // FIXME maybe we can make this more finegrained by running the
         // loopfilter per-block instead of after each sbrow
         // In fact that would also make intra pred left preparation easier?
@@ -1232,6 +1235,7 @@ static int loopfilter_proc(AVCodecContext *avctx) {
     VP9Filter *lflvl_ptr;
     int col;
     int bytesperpixel = s->bytesperpixel;
+    int i;
     //loopfilter one row
         pthread_mutex_lock(&s->mutex);
         while (!s->row_ready)
