@@ -1133,7 +1133,7 @@ int decode_tiles(AVCodecContext *avctx, void *tdata, int jobnr,
                               int threadnr)
 {                              
     av_log(avctx, AV_LOG_DEBUG, "thread_id =  %d\n", threadnr);
-    av_log(avctx, AV_LOG_DEBUG, "job_id =  %d\n", job_id);
+    av_log(avctx, AV_LOG_DEBUG, "job_id =  %d\n", jobnr);
     int row, col;
     VP9Context *s = avctx->priv_data;
     VP9TileData *td = &s->td[jobnr];
