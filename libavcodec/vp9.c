@@ -1448,7 +1448,7 @@ FF_ENABLE_DEPRECATION_WARNINGS
             num_jobs = FFMIN(s->s.h.tiling.tile_cols, avctx->thread_count);
 
         avctx->execute2(avctx, decode_tiles, s->td, NULL, num_jobs);
-
+        av_log(avctx, AV_LOG_DEBUG, "tile cols =  %d\n", s->s.h.tiling.tile_cols);
         for (i = 0; i < s->s.h.tiling.tile_cols; i++) {
             for (j = 0; j < 4; j++)
                 for (k = 0; k < 2; k++)
@@ -1474,7 +1474,7 @@ FF_ENABLE_DEPRECATION_WARNINGS
                     
                 for (k = 0; k < 3; k++) {
                     s->counts.filter[j][k] += s->td[i].counts.filter[j][k];
-                    av_log(avctx, AV_LOG_DEBUG, "counts.filter =  %d\n", s->counts.filter[j][k]);
+                    av_log(avctx, AV_LOG_DEBUG, "counts.filter =  %d - %d\n",s->s.h.tiling.tile_cols, s->counts.filter[j][k]);
                 }
                 for (k = 0; k < 2; k++)
                     s->counts.intra[j][k] += s->td[i].counts.intra[j][k];
