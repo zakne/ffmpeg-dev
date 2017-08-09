@@ -95,6 +95,7 @@ typedef struct VP9Context {
     GetBitContext gb;
     VP56RangeCoder c;
     unsigned td_size;
+    unsigned c_size;
     VP9Block *b_base, *b;
     int pass;
 
@@ -183,12 +184,12 @@ typedef struct VP9Context {
 
 typedef struct VP9TileData {
     VP9Context *s;
+    VP56RangeCoder *c_b;
     VP56RangeCoder c;
     int row, row7, col, col7;
     uint8_t *dst[3];
     ptrdiff_t y_stride, uv_stride, yoff, uvoff;
     VP9Block *b_base, *b;
-    unsigned tile_row_start, tile_row_end, tile_col_start, tile_col_end;
     
     struct {
         unsigned y_mode[4][10];
