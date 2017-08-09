@@ -236,7 +236,7 @@ static int update_block_buffers(AVCodecContext *avctx)
         s->uveob_base[0] = s->eob_base + 16 * 16 * sbs;
         s->uveob_base[1] = s->uveob_base[0] + chroma_eobs * sbs;
     } else {
-        for (i = 0; i < s->s.h.tiling.tile_cols*s->s.h.tiling.tile_rows; i++) {
+        for (i = 0; i < s->s.h.tiling.tile_cols; i++) {
             s->td[i].b_base = av_malloc(sizeof(VP9Block));
             s->td[i].block_base = av_mallocz((64 * 64 + 2 * chroma_blocks) * bytesperpixel * sizeof(int16_t) +
                                        16 * 16 + 2 * chroma_eobs);
