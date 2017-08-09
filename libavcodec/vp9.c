@@ -1375,7 +1375,7 @@ FF_ENABLE_DEPRECATION_WARNINGS
     }
     
     for (i = 0; i < s->s.h.tiling.tile_cols; i++) {
-        s->td[i].c_b = av_malloc(s->td[i].c_b, sizeof(VP56RangeCoder) * s->s.h.tiling.tile_rows);
+        s->td[i].c_b = av_malloc_array(s->s.h.tiling.tile_rows, sizeof(VP56RangeCoder));
         if (!s->td[i].c_b) {
             av_log(avctx, AV_LOG_ERROR, "Ran out of memory during range coder init\n");
             return AVERROR(ENOMEM);
