@@ -1451,17 +1451,7 @@ FF_ENABLE_DEPRECATION_WARNINGS
         av_log(avctx, AV_LOG_DEBUG, "tile cols =  %d\n", s->s.h.tiling.tile_cols);
         
         for (i = 0; i < s->s.h.tiling.tile_cols; i++) {
-            for (j = 0; j < 4; j++)
-                for (k = 0; k < 2; k++)
-                    for (l = 0; l < 2; l++)
-                        for (m = 0; m < 6; m++)
-                            for (n = 0; n < 6; n++) {
-                                for (o = 0; o < 3; o++)
-                                    s->counts.coef[j][k][l][m][n][o] += s->td[i].counts.coef[j][k][l][m][n][o];
-                                
-                                for (p = 0; p < 2; p++)
-                                    s->counts.eob[j][k][l][m][n][p] += s->td[i].counts.eob[j][k][l][m][n][p];
-                            }
+
 
             for (j = 0; j < 4; j++)
                 for (k = 0; k < 4; k++)
