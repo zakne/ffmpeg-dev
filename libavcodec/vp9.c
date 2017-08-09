@@ -1445,7 +1445,7 @@ FF_ENABLE_DEPRECATION_WARNINGS
         if (avctx->active_thread_type == FF_THREAD_FRAME)
             num_jobs = 1;
         else
-            num_jobs = FFMIN(s->s.h.tiling.tile_cols, avctx->thread_count);
+            num_jobs = s->s.h.tiling.tile_cols;
 
         avctx->execute2(avctx, decode_tiles, s->td, NULL, num_jobs);
         av_log(avctx, AV_LOG_DEBUG, "tile cols =  %d\n", s->s.h.tiling.tile_cols);
@@ -1553,11 +1553,11 @@ finish:
             return ret;
     }
 
-    //if (!s->s.h.invisible) {
+    if (!s->s.h.invisible) {
         if ((ret = av_frame_ref(frame, s->s.frames[CUR_FRAME].tf.f)) < 0)
             return ret;
         *got_frame = 1;
-    //}
+    }
 
     return pkt->size;
 }
