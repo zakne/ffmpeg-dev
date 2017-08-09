@@ -1532,7 +1532,7 @@ FF_ENABLE_DEPRECATION_WARNINGS
             
             for (j = 0; j < 10; j++)
                 for (k = 0; k < 10; k++)
-                    s->counts.uv_mode[j][k] += td[i].counts.uv_mode[j][k];
+                    s->counts.uv_mode[j][k] += s->td[i].counts.uv_mode[j][k];
         }
 
         if (s->pass < 2 && s->s.h.refreshctx && !s->s.h.parallelmode) {
