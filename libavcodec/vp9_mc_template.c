@@ -423,7 +423,7 @@ static void FN(inter_pred)(VP9TileData *td)
                       &b->mv[0][0], 0, 0, uvbw, uvbh, uvbw, uvbh, w1, h1, 0);
 
         if (b->comp) {
-            mc_luma_dir(td mc[bwl][b->filter][1], td->dst[0], ls_y,
+            mc_luma_dir(td, mc[bwl][b->filter][1], td->dst[0], ls_y,
                         ref2->data[0], ref2->linesize[0], tref2,
                         row << 3, col << 3, &b->mv[0][1], 0, 0, bw, bh, bw, bh, w2, h2, 1);
             w2 = (w2 + s->ss_h) >> s->ss_h;
