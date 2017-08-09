@@ -340,7 +340,7 @@ static av_always_inline void mc_chroma_unscaled(VP9TileData *td, vp9_mc_func (*m
                                                 ptrdiff_t y, ptrdiff_t x, const VP56mv *mv,
                                                 int bw, int bh, int w, int h, int bytesperpixel)
 {
-    VP9Context *s = td->s
+    VP9Context *s = td->s;
     int mx = mv->x * (1 << !s->ss_h), my = mv->y * (1 << !s->ss_v), th;
 
     y += my >> 4;
@@ -384,7 +384,7 @@ static av_always_inline void mc_chroma_unscaled(VP9TileData *td, vp9_mc_func (*m
                     px, py, pw, ph, bw, bh, w, h, i) \
     mc_luma_unscaled(td, s->dsp.mc, dst, dst_ls, src, src_ls, tref, row, col, \
                      mv, bw, bh, w, h, bytesperpixel)
-#define mc_chroma_dir(s, mc, dstu, dstv, dst_ls, srcu, srcu_ls, srcv, srcv_ls, tref, \
+#define mc_chroma_dir(td, mc, dstu, dstv, dst_ls, srcu, srcu_ls, srcv, srcv_ls, tref, \
                       row, col, mv, px, py, pw, ph, bw, bh, w, h, i) \
     mc_chroma_unscaled(td, s->dsp.mc, dstu, dstv, dst_ls, srcu, srcu_ls, srcv, srcv_ls, tref, \
                        row, col, mv, bw, bh, w, h, bytesperpixel)
