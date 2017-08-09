@@ -1243,8 +1243,8 @@ static int vp9_decode_frame(AVCodecContext *avctx, void *frame,
     const uint8_t *data = pkt->data;
     int size = pkt->size;
     VP9Context *s = avctx->priv_data;
-    int ret, tile_row, tile_col, i, ref, row, col, num_jobs;
-    int tile_col_start, tile_col_end, tile_row_start, tile_row_end;
+    int ret, tile_row, tile_col, i, ref, col, num_jobs;
+    int tile_col_start, tile_col_end;
     int j, k, l, m, n, o, p;
     int bytesperpixel;
     int retain_segmap_ref = s->s.frames[REF_FRAME_SEGMAP].segmentation_map &&
@@ -1427,7 +1427,6 @@ FF_ENABLE_DEPRECATION_WARNINGS
         }
 
         if (s->pass != 2) {
-
             for (tile_col = 0; tile_col < s->s.h.tiling.tile_cols; tile_col++) {
                 set_tile_offset(&tile_col_start, &tile_col_end,
                                 tile_col, s->s.h.tiling.log2_tile_cols, s->sb_cols);
