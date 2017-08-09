@@ -1426,10 +1426,12 @@ FF_ENABLE_DEPRECATION_WARNINGS
         }
 
         if (s->pass != 2) {
-            set_tile_offset(&tile_col_start, &tile_col_end,
-                            tile_col, s->s.h.tiling.log2_tile_cols, s->sb_cols);
 
             for (tile_col = 0; tile_col < s->s.h.tiling.tile_cols; tile_col++) {
+                set_tile_offset(&tile_col_start, &tile_col_end,
+                                tile_col, s->s.h.tiling.log2_tile_cols, s->sb_cols);
+
+                s->td[tile_col].tile_col_start = tile_col_start;
                 s->td[tile_col].yoff = yoff;
                 s->td[tile_col].uvoff = uvoff;
                 s->td[tile_col].s = s;

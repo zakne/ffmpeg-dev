@@ -190,7 +190,8 @@ typedef struct VP9TileData {
     uint8_t *dst[3];
     ptrdiff_t y_stride, uv_stride, yoff, uvoff;
     VP9Block *b_base, *b;
-    
+    unsigned tile_col_start;
+
     struct {
         unsigned y_mode[4][10];
         unsigned uv_mode[10][10];
