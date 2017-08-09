@@ -687,10 +687,10 @@ static int decode_frame_header(AVCodecContext *avctx,
         }
 
         for (i = 0; i < s->s.h.tiling.tile_cols; i++) {
-            s->td[i].c_b = av_fast_realloc(s->td[i].c_b, &s->c_size,
+            s->td[i].c_b = av_fast_realloc(s->td[i].c_b, &s->c_b_size[i],
                                  sizeof(VP56RangeCoder) * s->s.h.tiling.tile_rows);
             if (!s->td[i].c_b) {
-                av_log(avctx, AV_LOG_ERROR, "Ran out of memory during range init\n");
+                av_log(avctx, AV_LOG_ERROR, "Ran out of memory during range coder init\n");
                 return AVERROR(ENOMEM);
             }
         }
@@ -1109,6 +1109,7 @@ static void free_buffers(VP9Context *s)
         av_freep(&s->td[i].c);
         av_freep(&s->td[i].b_base);
         av_freep(&s->td[i].block_base);
+        s->c_b_size[i] = 0;
     }
 }
 
@@ -1133,7 +1134,6 @@ static av_cold int vp9_decode_free(AVCodecContext *avctx)
     free_buffers(s);
     av_freep(&s->td);
     s->td_size = 0;
-    s->c_size = 0;
 
     return 0;
 }
