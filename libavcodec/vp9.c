@@ -1165,7 +1165,7 @@ int decode_tiles(AVCodecContext *avctx, void *tdata, int jobnr,
                         jobnr, s->s.h.tiling.log2_tile_cols, s->sb_cols);
 
         if (s->pass != 2) {
-            memcpy(&td->c, td->c_b[tile_row], sizeof(td->c));
+            memcpy(&td->c, &td->c_b[tile_row], sizeof(td->c));
             for (row = tile_row_start; row < tile_row_end;
                  row += 8, yoff += ls_y * 64, uvoff += ls_uv * 64 >> s->ss_v) {
                 VP9Filter *lflvl_ptr = td->lflvl_ptr;
@@ -1182,8 +1182,6 @@ int decode_tiles(AVCodecContext *avctx, void *tdata, int jobnr,
                     memset(td->left_y_nnz_ctx, 0, 16);
                     memset(td->left_uv_nnz_ctx, 0, 32);
                     memset(td->left_segpred_ctx, 0, 8);
-
-                    
                 }
 
                 for (col = tile_col_start;
@@ -1212,13 +1210,13 @@ int decode_tiles(AVCodecContext *avctx, void *tdata, int jobnr,
                 // prediction of next row of sb64s
                 unsigned tiles_cols = tile_col_end - tile_col_start;
                 if (row + 8 < s->rows) {
-                    memcpy(s->intra_pred_data[0] + (td->tile_col_start * 8 * bytesperpixel),
+                    memcpy(s->intra_pred_data[0] + (tile_col_start * 8 * bytesperpixel),
                            f->data[0] + yoff + 63 * ls_y,
                            8 * tiles_cols * bytesperpixel);
-                    memcpy(s->intra_pred_data[1] + (td->tile_col_start * 8 * bytesperpixel >> s->ss_h),
+                    memcpy(s->intra_pred_data[1] + (tile_col_start * 8 * bytesperpixel >> s->ss_h),
                            f->data[1] + uvoff + ((64 >> s->ss_v) - 1) * ls_uv,
                            8 * tiles_cols * bytesperpixel >> s->ss_h);
-                    memcpy(s->intra_pred_data[2] + (td->tile_col_start * 8 * bytesperpixel >> s->ss_h),
+                    memcpy(s->intra_pred_data[2] + (tile_col_start * 8 * bytesperpixel >> s->ss_h),
                            f->data[2] + uvoff + ((64 >> s->ss_v) - 1) * ls_uv,
                            8 * tiles_cols * bytesperpixel >> s->ss_h);
                 }
@@ -1414,10 +1412,10 @@ FF_ENABLE_DEPRECATION_WARNINGS
                         ff_thread_report_progress(&s->s.frames[CUR_FRAME].tf, INT_MAX, 0);
                         return AVERROR_INVALIDDATA;
                     }
-                    ret = ff_vp56_init_range_decoder(&s->td[tile_col].c[tile_row], data, tile_size);
+                    ret = ff_vp56_init_range_decoder(&s->td[tile_col].c_b[tile_row], data, tile_size);
                     if (ret < 0)
                         return ret;
-                    if (vp56_rac_get_prob_branchy(&s->td[tile_col].c[tile_row], 128)) { // marker bit
+                    if (vp56_rac_get_prob_branchy(&s->td[tile_col].c_b[tile_row], 128)) { // marker bit
                         ff_thread_report_progress(&s->s.frames[CUR_FRAME].tf, INT_MAX, 0);
                         return AVERROR_INVALIDDATA;
                     }
