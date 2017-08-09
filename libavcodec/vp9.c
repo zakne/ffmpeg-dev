@@ -1215,7 +1215,7 @@ int decode_tiles(AVCodecContext *avctx, void *tdata, int jobnr,
                 }
 
                 // loopfilter one row
-                if (s->s.h.filter.level && avctx->active_thread_type != FF_THREAD_SLICE) {
+                /*if (s->s.h.filter.level && avctx->active_thread_type != FF_THREAD_SLICE) {
                     yoff2 = yoff;
                     uvoff2 = uvoff;
                     lflvl_ptr = s->lflvl;
@@ -1225,7 +1225,7 @@ int decode_tiles(AVCodecContext *avctx, void *tdata, int jobnr,
                         ff_vp9_loopfilter_sb(avctx, lflvl_ptr, row, col,
                                              yoff2, uvoff2);
                     }
-                }
+                }*/
 
                 // FIXME maybe we can make this more finegrained by running the
                 // loopfilter per-block instead of after each sbrow
