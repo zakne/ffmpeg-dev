@@ -1448,6 +1448,7 @@ FF_ENABLE_DEPRECATION_WARNINGS
             num_jobs = FFMIN(s->s.h.tiling.tile_cols, avctx->thread_count);
 
         avctx->execute2(avctx, decode_tiles, s->td, NULL, num_jobs);
+        av_log(avctx, AV_LOG_DEBUG, "tile cols =  %d\n", s->s.h.tiling.tile_cols);
         
         for (i = 0; i < s->s.h.tiling.tile_cols; i++) {
             for (j = 0; j < 4; j++)
@@ -1508,16 +1509,6 @@ FF_ENABLE_DEPRECATION_WARNINGS
                 for (k = 0; k < 2; k++)
                     s->counts.skip[j][k] += s->td[i].counts.skip[j][k];
 
-            for (j = 0; j < 2; j++) {
-                for (k = 0; k < 2; k++) {
-                    s->counts.mv_comp[j].sign[k] += s->td[i].counts.mv_comp[j].sign[k];
-                    s->counts.mv_comp[j].class0[k] += s->td[i].counts.mv_comp[j].class0[k];
-                    s->counts.mv_comp[j].hp[k] += s->td[i].counts.mv_comp[j].hp[k];
-                    s->counts.mv_comp[j].class0_hp[k] += s->td[i].counts.mv_comp[j].class0_hp[k];
-                    for (l = 0; l < 4; l++) {
-                        s->counts.mv_comp[j].class0_fp[k][l] += s->td[i].counts.mv_comp[j].class0_fp[k][l];
-                    }
-                }
 
         }
 
