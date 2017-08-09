@@ -1507,7 +1507,7 @@ FF_ENABLE_DEPRECATION_WARNINGS
 
             for (j = 0; j < 3; j++)
                 for (k = 0; k < 2; k++)
-                    s->counts.skip[j][k] += s->td[i].counts.skip[j][k];s
+                    s->counts.skip[j][k] += s->td[i].counts.skip[j][k];
 
             for (j = 0; j < 2; j++) {
                 for (k = 0; k < 2; k++) {
