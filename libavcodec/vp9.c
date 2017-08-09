@@ -1491,25 +1491,33 @@ FF_ENABLE_DEPRECATION_WARNINGS
                     s->counts.tx8p[j][k] += s->td[i].counts.tx8p[j][k];
             }
 
-            for (j = 0; j < 5; j++) {
+
+
+            for (j = 0; j < 2; j++) {
                 for (k = 0; k < 2; k++) {
-                    s->counts.comp[j][k] += s->td[i].counts.comp[j][k];
-                    s->counts.comp_ref[j][k] += s->td[i].counts.comp_ref[j][k];
-                    
-                    for (l = 0; l < 2; l++)
-                        s->counts.single_ref[j][k][l] += s->td[i].counts.single_ref[j][k][l];
+                    s->counts.mv_comp[j].sign[k] += s->td[i].counts.mv_comp[j].sign[k];
+                    s->counts.mv_comp[j].class0[k] += s->td[i].counts.mv_comp[j].class0[k];
+                    s->counts.mv_comp[j].hp[k] += s->td[i].counts.mv_comp[j].hp[k];
+                    s->counts.mv_comp[j].class0_hp[k] += s->td[i].counts.mv_comp[j].class0_hp[k];
+                    for (l = 0; l < 4; l++) {
+                        s->counts.mv_comp[j].class0_fp[k][l] += s->td[i].counts.mv_comp[j].class0_fp[k][l];
+                    }
                 }
-            }
 
-            for (j = 0; j < 7; j++)
                 for (k = 0; k < 4; k++)
-                    s->counts.mv_mode[j][k] += s->td[i].counts.mv_mode[j][k];
-
-            for (j = 0; j < 3; j++)
-                for (k = 0; k < 2; k++)
-                    s->counts.skip[j][k] += s->td[i].counts.skip[j][k];
-
-
+                    s->counts.mv_comp[j].fp[k] += s->td[i].counts.mv_comp[j].fp[k];
+                
+                for (k = 0; k < 11; k++)
+                    s->counts.mv_comp[j].classes[k] += s->td[i].counts.mv_comp[j].classes[k];
+                
+                for (k = 0; k < 10; k++)
+                    for (l = 0; l < 2; l++)
+                        s->counts.mv_comp[j].bits[k][l] += s->td[i].counts.mv_comp[j].bits[k][l];
+            }
+            
+            for (j = 0; j < 10; j++)
+                for (k = 0; k < 10; k++)
+                    s->counts.uv_mode[j][k] += s->td[i].counts.uv_mode[j][k];
         }
 
         if (s->pass < 2 && s->s.h.refreshctx && !s->s.h.parallelmode) {
