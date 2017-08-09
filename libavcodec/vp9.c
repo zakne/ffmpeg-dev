@@ -1373,7 +1373,7 @@ FF_ENABLE_DEPRECATION_WARNINGS
     } else if (!s->s.h.refreshctx) {
         ff_thread_finish_setup(avctx);
     }
-    
+    av_log(avctx, AV_LOG_DEBUG, "halo!----------------------\n");
     for (i = 0; i < s->s.h.tiling.tile_cols; i++) {
         s->td[i].c_b = av_malloc_array(s->s.h.tiling.tile_rows, sizeof(VP56RangeCoder));
         if (!s->td[i].c_b) {
