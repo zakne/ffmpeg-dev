@@ -170,14 +170,11 @@ typedef struct VP9Context {
     // whole-frame cache
     uint8_t *intra_pred_data[3];
     VP9Filter *lflvl;
-    DECLARE_ALIGNED(32, uint8_t, edge_emu_buffer)[135 * 144 * 2];
 
     // block reconstruction intermediates
     int block_alloc_using_2pass;
     int16_t *block_base, *block, *uvblock_base[2], *uvblock[2];
     uint8_t *eob_base, *uveob_base[2], *eob, *uveob[2];
-    DECLARE_ALIGNED(32, uint8_t, tmp_y)[64 * 64 * 2];
-    DECLARE_ALIGNED(32, uint8_t, tmp_uv)[2][64 * 64 * 2];
     uint16_t mvscale[3][2];
     uint8_t mvstep[3][2];
 } VP9Context;
@@ -223,6 +220,7 @@ typedef struct VP9TileData {
 
     // whole-frame cache
     VP9Filter *lflvl_ptr;
+    DECLARE_ALIGNED(32, uint8_t, edge_emu_buffer)[135 * 144 * 2];
 
     // contextual (left) cache
     DECLARE_ALIGNED(16, uint8_t, left_y_nnz_ctx)[16];
@@ -239,6 +237,8 @@ typedef struct VP9TileData {
     DECLARE_ALIGNED(8, uint8_t, left_filter_ctx)[8];
     // block reconstruction intermediates
     struct { int x, y; } min_mv, max_mv;
+    DECLARE_ALIGNED(32, uint8_t, tmp_y)[64 * 64 * 2];
+    DECLARE_ALIGNED(32, uint8_t, tmp_uv)[2][64 * 64 * 2];
     int16_t *block_base, *block, *uvblock_base[2], *uvblock[2];
     uint8_t *eob_base, *uveob_base[2], *eob, *uveob[2];
 } VP9TileData;

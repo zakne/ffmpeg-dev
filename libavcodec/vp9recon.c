@@ -319,12 +319,12 @@ static av_always_inline void mc_luma_unscaled(VP9Context *s, vp9_mc_func (*mc)[2
     // (!!my * 5) than horizontally (!!mx * 4).
     if (x < !!mx * 3 || y < !!my * 3 ||
         x + !!mx * 4 > w - bw || y + !!my * 5 > h - bh) {
-        s->vdsp.emulated_edge_mc(s->edge_emu_buffer,
+        s->vdsp.emulated_edge_mc(td->edge_emu_buffer,
                                  ref - !!my * 3 * ref_stride - !!mx * 3 * bytesperpixel,
                                  160, ref_stride,
                                  bw + !!mx * 7, bh + !!my * 7,
                                  x - !!mx * 3, y - !!my * 3, w, h);
-        ref = s->edge_emu_buffer + !!my * 3 * 160 + !!mx * 3 * bytesperpixel;
+        ref = td->edge_emu_buffer + !!my * 3 * 160 + !!mx * 3 * bytesperpixel;
         ref_stride = 160;
     }
     mc[!!mx][!!my](dst, dst_stride, ref, ref_stride, bh, mx << 1, my << 1);
@@ -357,20 +357,20 @@ static av_always_inline void mc_chroma_unscaled(VP9Context *s, vp9_mc_func (*mc)
     // (!!my * 5) than horizontally (!!mx * 4).
     if (x < !!mx * 3 || y < !!my * 3 ||
         x + !!mx * 4 > w - bw || y + !!my * 5 > h - bh) {
-        s->vdsp.emulated_edge_mc(s->edge_emu_buffer,
+        s->vdsp.emulated_edge_mc(td->edge_emu_buffer,
                                  ref_u - !!my * 3 * src_stride_u - !!mx * 3 * bytesperpixel,
                                  160, src_stride_u,
                                  bw + !!mx * 7, bh + !!my * 7,
                                  x - !!mx * 3, y - !!my * 3, w, h);
-        ref_u = s->edge_emu_buffer + !!my * 3 * 160 + !!mx * 3 * bytesperpixel;
+        ref_u = td->edge_emu_buffer + !!my * 3 * 160 + !!mx * 3 * bytesperpixel;
         mc[!!mx][!!my](dst_u, dst_stride, ref_u, 160, bh, mx, my);
 
-        s->vdsp.emulated_edge_mc(s->edge_emu_buffer,
+        s->vdsp.emulated_edge_mc(td->edge_emu_buffer,
                                  ref_v - !!my * 3 * src_stride_v - !!mx * 3 * bytesperpixel,
                                  160, src_stride_v,
                                  bw + !!mx * 7, bh + !!my * 7,
                                  x - !!mx * 3, y - !!my * 3, w, h);
-        ref_v = s->edge_emu_buffer + !!my * 3 * 160 + !!mx * 3 * bytesperpixel;
+        ref_v = td->edge_emu_buffer + !!my * 3 * 160 + !!mx * 3 * bytesperpixel;
         mc[!!mx][!!my](dst_v, dst_stride, ref_v, 160, bh, mx, my);
     } else {
         mc[!!mx][!!my](dst_u, dst_stride, ref_u, src_stride_u, bh, mx, my);
@@ -446,12 +446,12 @@ static av_always_inline void mc_luma_scaled(VP9Context *s, vp9_scaled_mc_func sm
     // needed, so switch to emulated edge one pixel sooner vertically
     // (y + 5 >= h - refbh_m1) than horizontally (x + 4 >= w - refbw_m1).
     if (x < 3 || y < 3 || x + 4 >= w - refbw_m1 || y + 5 >= h - refbh_m1) {
-        s->vdsp.emulated_edge_mc(s->edge_emu_buffer,
+        s->vdsp.emulated_edge_mc(td->edge_emu_buffer,
                                  ref - 3 * ref_stride - 3 * bytesperpixel,
                                  288, ref_stride,
                                  refbw_m1 + 8, refbh_m1 + 8,
                                  x - 3, y - 3, w, h);
-        ref = s->edge_emu_buffer + 3 * 288 + 3 * bytesperpixel;
+        ref = td->edge_emu_buffer + 3 * 288 + 3 * bytesperpixel;
         ref_stride = 288;
     }
     smc(dst, dst_stride, ref, ref_stride, bh, mx, my, step[0], step[1]);
@@ -515,20 +515,20 @@ static av_always_inline void mc_chroma_scaled(VP9Context *s, vp9_scaled_mc_func 
     // needed, so switch to emulated edge one pixel sooner vertically
     // (y + 5 >= h - refbh_m1) than horizontally (x + 4 >= w - refbw_m1).
     if (x < 3 || y < 3 || x + 4 >= w - refbw_m1 || y + 5 >= h - refbh_m1) {
-        s->vdsp.emulated_edge_mc(s->edge_emu_buffer,
+        s->vdsp.emulated_edge_mc(td->edge_emu_buffer,
                                  ref_u - 3 * src_stride_u - 3 * bytesperpixel,
                                  288, src_stride_u,
                                  refbw_m1 + 8, refbh_m1 + 8,
                                  x - 3, y - 3, w, h);
-        ref_u = s->edge_emu_buffer + 3 * 288 + 3 * bytesperpixel;
+        ref_u = td->edge_emu_buffer + 3 * 288 + 3 * bytesperpixel;
         smc(dst_u, dst_stride, ref_u, 288, bh, mx, my, step[0], step[1]);
 
-        s->vdsp.emulated_edge_mc(s->edge_emu_buffer,
+        s->vdsp.emulated_edge_mc(td->edge_emu_buffer,
                                  ref_v - 3 * src_stride_v - 3 * bytesperpixel,
                                  288, src_stride_v,
                                  refbw_m1 + 8, refbh_m1 + 8,
                                  x - 3, y - 3, w, h);
-        ref_v = s->edge_emu_buffer + 3 * 288 + 3 * bytesperpixel;
+        ref_v = td->edge_emu_buffer + 3 * 288 + 3 * bytesperpixel;
         smc(dst_v, dst_stride, ref_v, 288, bh, mx, my, step[0], step[1]);
     } else {
         smc(dst_u, dst_stride, ref_u, src_stride_u, bh, mx, my, step[0], step[1]);
