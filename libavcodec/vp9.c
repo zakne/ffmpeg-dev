@@ -1460,7 +1460,7 @@ FF_ENABLE_DEPRECATION_WARNINGS
                                 
                                 for (p = 0; p < 2; p++)
                                     s->counts.eob[j][k][l][m][n][p] += s->td[i].counts.eob[j][k][l][m][n][p];
-                        }
+                            }
 
             for (j = 0; j < 4; j++)
                 for (k = 0; k < 4; k++)
@@ -1472,9 +1472,10 @@ FF_ENABLE_DEPRECATION_WARNINGS
                 for (k = 0; k < 10; k++)
                     s->counts.y_mode[j][k] += s->td[i].counts.y_mode[j][k];
                     
-                for (k = 0; k < 3; k++)
+                for (k = 0; k < 3; k++) {
                     s->counts.filter[j][k] += s->td[i].counts.filter[j][k];
-                
+                    av_log(avctx, AV_LOG_DEBUG, "counts.filter =  %d\n", s->counts.filter[j][k]);
+                }
                 for (k = 0; k < 2; k++)
                     s->counts.intra[j][k] += s->td[i].counts.intra[j][k];
             }
