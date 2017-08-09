@@ -1109,7 +1109,6 @@ static void free_buffers(VP9Context *s)
         av_freep(&s->td[i].c_b);
         av_freep(&s->td[i].b_base);
         av_freep(&s->td[i].block_base);
-        s->c_b_size[i] = 0;
     }
 }
 
@@ -1133,6 +1132,8 @@ static av_cold int vp9_decode_free(AVCodecContext *avctx)
     }
     free_buffers(s);
     av_freep(&s->td);
+    for (i = 0; i < s->s.h.tiling.tile_cols; i++)
+        s->c_b_size[i] = 0;
     s->td_size = 0;
 
     return 0;
