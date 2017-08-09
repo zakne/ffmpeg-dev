@@ -1367,6 +1367,7 @@ void ff_vp9_decode_block(VP9TileData *td, int row, int col,
     if (emu[0]) {
         td->dst[0] = td->tmp_y;
         td->y_stride = 128;
+        printf("tmp used!");
     } else {
         td->dst[0] = f->data[0] + yoff;
         td->y_stride = f->linesize[0];
