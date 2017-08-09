@@ -1152,6 +1152,7 @@ int decode_tiles(AVCodecContext *avctx, void *tdata, int jobnr,
 
     set_tile_offset(&tile_col_start, &tile_col_end,
                     jobnr, s->s.h.tiling.log2_tile_cols, s->sb_cols);
+    td->tile_col_start  = tile_col_start;
     for (tile_row = 0; tile_row < s->s.h.tiling.tile_rows; tile_row++) {
         set_tile_offset(&tile_row_start, &tile_row_end,
                         tile_row, s->s.h.tiling.log2_tile_rows, s->sb_rows);
@@ -1430,7 +1431,6 @@ FF_ENABLE_DEPRECATION_WARNINGS
                 set_tile_offset(&tile_col_start, &tile_col_end,
                                 tile_col, s->s.h.tiling.log2_tile_cols, s->sb_cols);
 
-                s->td[tile_col].tile_col_start = tile_col_start;
                 s->td[tile_col].yoff = yoff;
                 s->td[tile_col].uvoff = uvoff;
                 s->td[tile_col].s = s;
