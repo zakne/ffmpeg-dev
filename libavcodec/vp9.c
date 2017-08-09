@@ -1491,7 +1491,23 @@ FF_ENABLE_DEPRECATION_WARNINGS
                     s->counts.tx8p[j][k] += s->td[i].counts.tx8p[j][k];
             }
 
+            for (j = 0; j < 5; j++) {
+                for (k = 0; k < 2; k++) {
+                    s->counts.comp[j][k] += s->td[i].counts.comp[j][k];
+                    s->counts.comp_ref[j][k] += s->td[i].counts.comp_ref[j][k];
+                    
+                    for (l = 0; l < 2; l++)
+                        s->counts.single_ref[j][k][l] += s->td[i].counts.single_ref[j][k][l];
+                }
+            }
 
+            for (j = 0; j < 7; j++)
+                for (k = 0; k < 4; k++)
+                    s->counts.mv_mode[j][k] += s->td[i].counts.mv_mode[j][k];
+
+            for (j = 0; j < 3; j++)
+                for (k = 0; k < 2; k++)
+                    s->counts.skip[j][k] += s->td[i].counts.skip[j][k];s
 
             for (j = 0; j < 2; j++) {
                 for (k = 0; k < 2; k++) {
