@@ -1448,7 +1448,6 @@ FF_ENABLE_DEPRECATION_WARNINGS
             num_jobs = s->s.h.tiling.tile_cols;
 
         avctx->execute2(avctx, decode_tiles, s->td, NULL, num_jobs);
-        av_log(avctx, AV_LOG_DEBUG, "tile cols =  %d\n", s->s.h.tiling.tile_cols);
         
         for (i = 0; i < s->s.h.tiling.tile_cols; i++) {
             for (j = 0; j < 4; j++)
