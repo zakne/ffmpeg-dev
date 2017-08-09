@@ -1474,7 +1474,7 @@ FF_ENABLE_DEPRECATION_WARNINGS
                     
                 for (k = 0; k < 3; k++) {
                     s->counts.filter[j][k] += s->td[i].counts.filter[j][k];
-                    av_log(avctx, AV_LOG_DEBUG, "counts.filter =  %d - %d\n",s->s.h.tiling.tile_cols, s->counts.filter[j][k]);
+                    av_log(avctx, AV_LOG_DEBUG, "counts.filter =  %d - %d\n", i, s->counts.filter[j][k]);
                 }
                 for (k = 0; k < 2; k++)
                     s->counts.intra[j][k] += s->td[i].counts.intra[j][k];
