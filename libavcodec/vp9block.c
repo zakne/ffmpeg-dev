@@ -128,7 +128,7 @@ static void decode_mode(VP9TileData *td)
         memset(&s->above_segpred_ctx[col], 1, w4);
         memset(&td->left_segpred_ctx[row7], 1, h4);
     } else {
-        b->seg_id = vp8_rac_get_tree(&s->c, ff_vp9_segmentation_tree,
+        b->seg_id = vp8_rac_get_tree(&td->c, ff_vp9_segmentation_tree,
                                      s->s.h.segmentation.prob);
 
         memset(&s->above_segpred_ctx[col], 0, w4);
