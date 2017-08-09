@@ -1451,79 +1451,19 @@ FF_ENABLE_DEPRECATION_WARNINGS
         av_log(avctx, AV_LOG_DEBUG, "tile cols =  %d\n", s->s.h.tiling.tile_cols);
         
         for (i = 0; i < s->s.h.tiling.tile_cols; i++) {
-
-
             for (j = 0; j < 4; j++)
-                for (k = 0; k < 4; k++)
-                    for (l = 0; l < 4; l++)
-                        s->counts.partition[j][k][l] += s->td[i].counts.partition[j][k][l];
-
-            for (j = 0; j < 4; j++) {
-                s->counts.mv_joint[j] += s->td[i].counts.mv_joint[j];
-                for (k = 0; k < 10; k++)
-                    s->counts.y_mode[j][k] += s->td[i].counts.y_mode[j][k];
-                    
-                for (k = 0; k < 3; k++) {
-                    s->counts.filter[j][k] += s->td[i].counts.filter[j][k];
-                }
                 for (k = 0; k < 2; k++)
-                    s->counts.intra[j][k] += s->td[i].counts.intra[j][k];
-            }
-
-            for (j = 0; j < 2; j++) {
-                for (k = 0; k < 4; k++)
-                    s->counts.tx32p[j][k] += s->td[i].counts.tx32p[j][k];
-                
-                for (k = 0; k < 3; k++)
-                    s->counts.tx16p[j][k] += s->td[i].counts.tx16p[j][k];
-                
-                for (k = 0; k < 2; k++)
-                    s->counts.tx8p[j][k] += s->td[i].counts.tx8p[j][k];
-            }
-
-            for (j = 0; j < 5; j++) {
-                for (k = 0; k < 2; k++) {
-                    s->counts.comp[j][k] += s->td[i].counts.comp[j][k];
-                    s->counts.comp_ref[j][k] += s->td[i].counts.comp_ref[j][k];
-                    
                     for (l = 0; l < 2; l++)
-                        s->counts.single_ref[j][k][l] += s->td[i].counts.single_ref[j][k][l];
-                }
-            }
+                        for (m = 0; m < 6; m++)
+                            for (n = 0; n < 6; n++) {
+                                for (o = 0; o < 3; o++)
+                                    s->counts.coef[j][k][l][m][n][o] += s->td[i].counts.coef[j][k][l][m][n][o];
+                                
+                                for (p = 0; p < 2; p++)
+                                    s->counts.eob[j][k][l][m][n][p] += s->td[i].counts.eob[j][k][l][m][n][p];
+                            }
 
-            for (j = 0; j < 7; j++)
-                for (k = 0; k < 4; k++)
-                    s->counts.mv_mode[j][k] += s->td[i].counts.mv_mode[j][k];
 
-            for (j = 0; j < 3; j++)
-                for (k = 0; k < 2; k++)
-                    s->counts.skip[j][k] += s->td[i].counts.skip[j][k];
-
-            for (j = 0; j < 2; j++) {
-                for (k = 0; k < 2; k++) {
-                    s->counts.mv_comp[j].sign[k] += s->td[i].counts.mv_comp[j].sign[k];
-                    s->counts.mv_comp[j].class0[k] += s->td[i].counts.mv_comp[j].class0[k];
-                    s->counts.mv_comp[j].hp[k] += s->td[i].counts.mv_comp[j].hp[k];
-                    s->counts.mv_comp[j].class0_hp[k] += s->td[i].counts.mv_comp[j].class0_hp[k];
-                    for (l = 0; l < 4; l++) {
-                        s->counts.mv_comp[j].class0_fp[k][l] += s->td[i].counts.mv_comp[j].class0_fp[k][l];
-                    }
-                }
-
-                for (k = 0; k < 4; k++)
-                    s->counts.mv_comp[j].fp[k] += s->td[i].counts.mv_comp[j].fp[k];
-                
-                for (k = 0; k < 11; k++)
-                    s->counts.mv_comp[j].classes[k] += s->td[i].counts.mv_comp[j].classes[k];
-                
-                for (k = 0; k < 10; k++)
-                    for (l = 0; l < 2; l++)
-                        s->counts.mv_comp[j].bits[k][l] += s->td[i].counts.mv_comp[j].bits[k][l];
-            }
-            
-            for (j = 0; j < 10; j++)
-                for (k = 0; k < 10; k++)
-                    s->counts.uv_mode[j][k] += s->td[i].counts.uv_mode[j][k];
         }
 
         if (s->pass < 2 && s->s.h.refreshctx && !s->s.h.parallelmode) {
