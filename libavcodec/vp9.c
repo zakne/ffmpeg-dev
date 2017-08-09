@@ -685,15 +685,6 @@ static int decode_frame_header(AVCodecContext *avctx,
             av_log(avctx, AV_LOG_ERROR, "Ran out of memory during tile init\n");
             return AVERROR(ENOMEM);
         }
-
-        for (i = 0; i < s->s.h.tiling.tile_cols; i++) {
-            s->td[i].c_b = av_fast_realloc(s->td[i].c_b, &s->c_b_size[i],
-                                 sizeof(VP56RangeCoder) * s->s.h.tiling.tile_rows);
-            if (!s->td[i].c_b) {
-                av_log(avctx, AV_LOG_ERROR, "Ran out of memory during range coder init\n");
-                return AVERROR(ENOMEM);
-            }
-        }
     }
 
     /* check reference frames */
@@ -1381,6 +1372,14 @@ FF_ENABLE_DEPRECATION_WARNINGS
         ff_thread_finish_setup(avctx);
     } else if (!s->s.h.refreshctx) {
         ff_thread_finish_setup(avctx);
+    }
+    
+    for (i = 0; i < s->s.h.tiling.tile_cols; i++) {
+        s->td[i].c_b = av_malloc(s->td[i].c_b, sizeof(VP56RangeCoder) * s->s.h.tiling.tile_rows);
+        if (!s->td[i].c_b) {
+            av_log(avctx, AV_LOG_ERROR, "Ran out of memory during range coder init\n");
+            return AVERROR(ENOMEM);
+        }
     }
 
     do {
