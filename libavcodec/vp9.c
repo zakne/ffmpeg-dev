@@ -1451,7 +1451,7 @@ FF_ENABLE_DEPRECATION_WARNINGS
 
         avctx->execute2(avctx, decode_tiles, s->td, NULL, num_jobs);
 
-        for (i = 0; i < s->s.h.tiling.tile_rows*s->s.h.tiling.tile_cols; i++) {
+        for (i = 0; i < s->s.h.tiling.tile_cols; i++) {
             for (j = 0; j < 4; j++)
                 for (k = 0; k < 2; k++)
                     for (l = 0; l < 2; l++)
