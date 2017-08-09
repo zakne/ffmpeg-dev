@@ -1156,7 +1156,6 @@ int decode_tiles(AVCodecContext *avctx, void *tdata, int jobnr,
         set_tile_offset(&tile_row_start, &tile_row_end,
                         tile_row, s->s.h.tiling.log2_tile_rows, s->sb_rows);
 
-        td->tile_col_start = tile_col_start;
         if (s->pass != 2) {
             memcpy(&td->c, &td->c_b[tile_row], sizeof(td->c));
             for (row = tile_row_start; row < tile_row_end;
