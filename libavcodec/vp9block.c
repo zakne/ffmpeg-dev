@@ -1402,7 +1402,7 @@ void ff_vp9_decode_block(VP9TileData *td, int row, int col,
             av_assert2(n <= 4);
             if (w & bw) {
                 s->dsp.mc[n][0][0][0][0](f->data[0] + yoff + o * bytesperpixel, f->linesize[0],
-                                         td->tmp_y + o * bytesperpixel, 128, h, 0, 0);
+                                         s->tmp_y + o * bytesperpixel, 128, h, 0, 0);
                 o += bw;
             }
         }
