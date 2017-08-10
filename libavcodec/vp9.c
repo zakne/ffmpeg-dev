@@ -679,8 +679,7 @@ static int decode_frame_header(AVCodecContext *avctx,
     s->s.h.tiling.tile_rows = 1 << s->s.h.tiling.log2_tile_rows;
     if (s->s.h.tiling.tile_cols != (1 << s->s.h.tiling.log2_tile_cols)) {
         s->s.h.tiling.tile_cols = 1 << s->s.h.tiling.log2_tile_cols;
-        s->td = av_fast_realloc(s->td, &s->td_size,
-                                 sizeof(VP9TileData) * s->s.h.tiling.tile_cols);
+        s->td = av_malloc(sizeof(VP9TileData) * s->s.h.tiling.tile_cols);
         if (!s->td) {
             av_log(avctx, AV_LOG_ERROR, "Ran out of memory during tile init\n");
             return AVERROR(ENOMEM);
