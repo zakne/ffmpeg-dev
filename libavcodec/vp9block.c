@@ -1369,7 +1369,6 @@ void ff_vp9_decode_block(VP9TileData *td, int row, int col,
         td->y_stride = 128;
     } else {
         td->dst[0] = f->data[0] + yoff;
-        printf("fdata-------------------\n");
         td->y_stride = f->linesize[0];
     }
     if (emu[1]) {
