@@ -173,6 +173,8 @@ typedef struct VP9Context {
 
     // block reconstruction intermediates
     int block_alloc_using_2pass;
+    DECLARE_ALIGNED(32, uint8_t, tmp_y)[64 * 64 * 2];
+    DECLARE_ALIGNED(32, uint8_t, tmp_uv)[2][64 * 64 * 2];
     int16_t *block_base, *block, *uvblock_base[2], *uvblock[2];
     uint8_t *eob_base, *uveob_base[2], *eob, *uveob[2];
     uint16_t mvscale[3][2];
@@ -237,8 +239,6 @@ typedef struct VP9TileData {
     DECLARE_ALIGNED(8, uint8_t, left_filter_ctx)[8];
     // block reconstruction intermediates
     struct { int x, y; } min_mv, max_mv;
-    DECLARE_ALIGNED(32, uint8_t, tmp_y)[64 * 64 * 2];
-    DECLARE_ALIGNED(32, uint8_t, tmp_uv)[2][64 * 64 * 2];
     int16_t *block_base, *block, *uvblock_base[2], *uvblock[2];
     uint8_t *eob_base, *uveob_base[2], *eob, *uveob[2];
 } VP9TileData;

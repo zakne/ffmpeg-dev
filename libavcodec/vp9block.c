@@ -1365,15 +1365,15 @@ void ff_vp9_decode_block(VP9TileData *td, int row, int col,
     emu[1] = ((col + w4) * 8 >> s->ss_h) * bytesperpixel > f->linesize[1] ||
              (row + h4) > s->rows;
     if (emu[0]) {
-        td->dst[0] = td->tmp_y;
+        td->dst[0] = s->tmp_y;
         td->y_stride = 128;
     } else {
         td->dst[0] = f->data[0] + yoff;
         td->y_stride = f->linesize[0];
     }
     if (emu[1]) {
-        td->dst[1] = td->tmp_uv[0];
-        td->dst[2] = td->tmp_uv[1];
+        td->dst[1] = s->tmp_uv[0];
+        td->dst[2] = s->tmp_uv[1];
         td->uv_stride = 128;
     } else {
         td->dst[1] = f->data[1] + uvoff;
@@ -1417,9 +1417,9 @@ void ff_vp9_decode_block(VP9TileData *td, int row, int col,
             av_assert2(n <= 4);
             if (w & bw) {
                 s->dsp.mc[n][0][0][0][0](f->data[1] + uvoff + o * bytesperpixel, f->linesize[1],
-                                         td->tmp_uv[0] + o * bytesperpixel, 128, h, 0, 0);
+                                         s->tmp_uv[0] + o * bytesperpixel, 128, h, 0, 0);
                 s->dsp.mc[n][0][0][0][0](f->data[2] + uvoff + o * bytesperpixel, f->linesize[2],
-                                         td->tmp_uv[1] + o * bytesperpixel, 128, h, 0, 0);
+                                         s->tmp_uv[1] + o * bytesperpixel, 128, h, 0, 0);
                 o += bw;
             }
         }
