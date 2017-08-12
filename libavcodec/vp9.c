@@ -1448,7 +1448,11 @@ FF_ENABLE_DEPRECATION_WARNINGS
 
         avctx->execute2(avctx, decode_tiles, s->td, NULL, num_jobs);
         av_log(avctx, AV_LOG_DEBUG, "tile cols =  %d\n", s->s.h.tiling.tile_cols);
-        
+        int a;
+        for (a = 0; a < sizeof(s->td[i].counts) / sizeof(unsigned); a++) {
+            ((unsigned *) s->counts)[a] += ((unsigned *) s->td[i].counts)[a];
+        }
+        /*
         for (i = 0; i < s->s.h.tiling.tile_cols; i++) {
             for (j = 0; j < 4; j++)
                 for (k = 0; k < 2; k++)
@@ -1533,7 +1537,7 @@ FF_ENABLE_DEPRECATION_WARNINGS
             for (j = 0; j < 10; j++)
                 for (k = 0; k < 10; k++)
                     s->counts.uv_mode[j][k] += s->td[i].counts.uv_mode[j][k];
-        }
+        }*/
 
         if (s->pass < 2 && s->s.h.refreshctx && !s->s.h.parallelmode) {
             ff_vp9_adapt_probs(s);
