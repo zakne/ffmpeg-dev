@@ -1242,9 +1242,8 @@ static int vp9_decode_frame(AVCodecContext *avctx, void *frame,
     const uint8_t *data = pkt->data;
     int size = pkt->size;
     VP9Context *s = avctx->priv_data;
-    int ret, tile_row, tile_col, i, ref, col, num_jobs;
+    int ret, tile_row, tile_col, i, j, ref, col, num_jobs;
     int tile_col_start, tile_col_end;
-    int j, k, l, m, n, o, p;
     int bytesperpixel;
     int retain_segmap_ref = s->s.frames[REF_FRAME_SEGMAP].segmentation_map &&
                             (!s->s.h.segmentation.enabled || !s->s.h.segmentation.update_map);
@@ -1448,9 +1447,10 @@ FF_ENABLE_DEPRECATION_WARNINGS
 
         avctx->execute2(avctx, decode_tiles, s->td, NULL, num_jobs);
         av_log(avctx, AV_LOG_DEBUG, "tile cols =  %d\n", s->s.h.tiling.tile_cols);
-        int a;
-        for (a = 0; a < sizeof(s->td[i].counts) / sizeof(unsigned); a++)
-            ((unsigned *)&s->counts)[a] += ((unsigned *)&s->td[i].counts)[a];
+        
+        for (i = 0; i < s->s.h.tiling.tile_cols; i++)
+            for (a = 0; a < sizeof(s->td[i].counts) / sizeof(unsigned); a++)
+                ((unsigned *)&s->counts)[a] += ((unsigned *)&s->td[i].counts)[a];
         /*
         for (i = 0; i < s->s.h.tiling.tile_cols; i++) {
             for (j = 0; j < 4; j++)
