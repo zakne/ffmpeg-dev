@@ -28,6 +28,7 @@
 #include <stdint.h>
 
 #include "libavutil/buffer.h"
+#include "libavutil/thread.h"
 #include "libavutil/internal.h"
 
 #include "vp9.h"
@@ -99,6 +100,15 @@ typedef struct VP9Context {
     VP9Block *b_base, *b;
     int pass;
 
+    pthread_mutex_t mutex;
+    pthread_cond_t cond;
+
+    int m_row;
+    int cur_row;
+    int row_ready;
+    ptrdiff_t cur_yoff, cur_uvoff;
+    VP9Filter *cur_lflvl_ptr;
+    
     uint8_t ss_h, ss_v;
     uint8_t last_bpp, bpp_index, bytesperpixel;
     uint8_t last_keyframe;

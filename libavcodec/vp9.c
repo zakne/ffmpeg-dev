@@ -176,7 +176,7 @@ static int update_size(AVCodecContext *avctx, int w, int h)
     // FIXME we slightly over-allocate here for subsampled chroma, but a little
     // bit of padding shouldn't affect performance...
     p = av_malloc(s->sb_cols * (128 + 192 * bytesperpixel +
-                                sizeof(*s->lflvl) + 16 * sizeof(*s->above_mv_ctx)));
+                                sizeof(*s->lflvl)*4 + 16 * sizeof(*s->above_mv_ctx)));
     if (!p)
         return AVERROR(ENOMEM);
     assign(s->intra_pred_data[0],  uint8_t *,             64 * bytesperpixel);
@@ -195,7 +195,7 @@ static int update_size(AVCodecContext *avctx, int w, int h)
     assign(s->above_comp_ctx,      uint8_t *,              8);
     assign(s->above_ref_ctx,       uint8_t *,              8);
     assign(s->above_filter_ctx,    uint8_t *,              8);
-    assign(s->lflvl,               VP9Filter *,            1);
+    assign(s->lflvl,               VP9Filter *,            4);
 #undef assign
 
     // these will be re-allocated a little later
@@ -1213,18 +1213,18 @@ int decode_tiles(AVCodecContext *avctx, void *tdata, int jobnr,
                            8 * tiles_cols * bytesperpixel >> s->ss_h);
                 }
 
-                // loopfilter one row
-                /*if (s->s.h.filter.level && avctx->active_thread_type != FF_THREAD_SLICE) {
-                    yoff2 = yoff;
-                    uvoff2 = uvoff;
-                    lflvl_ptr = s->lflvl;
-                    for (col = 0; col < s->cols;
-                         col += 8, yoff2 += 64 * bytesperpixel,
-                         uvoff2 += 64 * bytesperpixel >> s->ss_h, lflvl_ptr++) {
-                        ff_vp9_loopfilter_sb(avctx, lflvl_ptr, row, col,
-                                             yoff2, uvoff2);
-                    }
-                }*/
+                pthread_mutex_lock(&s->mutex);
+                m_row++;
+                if (m_row[row_i] == s.s.h.tiling.tile_cols) {
+                    s->cur_lflvl_ptr = s->td[0].lflvl_ptr;
+                    s->cur_row = row;
+                    s->cur_uvoff = s->td[0].uvoff;
+                    s->cur_yoff = s->td[0].yoff;
+                    m_row = 0;
+                    s->row_ready = 1;
+                    pthread_cond_signal(&s->cond);
+                }
+                pthread_mutex_unlock(&s->mutex);
 
                 // FIXME maybe we can make this more finegrained by running the
                 // loopfilter per-block instead of after each sbrow
@@ -1235,6 +1235,34 @@ int decode_tiles(AVCodecContext *avctx, void *tdata, int jobnr,
     }
     return 0;
 }
+
+static int loopfilter_proc(AVCodecContext *avctx) {
+    VP9Context *s = avctx->priv_data;
+    ptrdiff_t uvoff2, yoff2;
+    VP9Filter *lflvl_ptr;
+    int col;
+
+    //loopfilter one row
+    pthread_mutex_lock(&s->mutex);
+    while (!s->row_ready)
+        pthread_cond_wait(&s->cond, &s->mutex);
+
+    if (s->s.h.filter.level) {
+        yoff2 = s->cur_yoff;
+        uvoff2 = s->cur_uvoff;
+        lflvl_ptr = s->cur_lflvl;
+        for (col = 0; col < s->cols;
+             col += 8, yoff2 += 64 * bytesperpixel,
+             uvoff2 += 64 * bytesperpixel >> s->ss_h, lflvl_ptr++) {
+            ff_vp9_loopfilter_sb(avctx, lflvl_ptr, s->cur_row, col,
+                                 yoff2, uvoff2);
+        }
+    }
+    s->row_ready = 0;
+    pthread_mutex_unlock(&s->mutex);
+    return 0;
+}
+
 
 static int vp9_decode_frame(AVCodecContext *avctx, void *frame,
                             int *got_frame, AVPacket *pkt)
@@ -1385,7 +1413,7 @@ FF_ENABLE_DEPRECATION_WARNINGS
         VP9Filter *lflvl_ptr = s->lflvl;
 
         for (i = 0; i < s->s.h.tiling.tile_cols; i++) {
-            s->td[i].b = s->td[i].b_base;
+            s->td[i].b = s->td[i].b_base;   
             s->td[i].block = s->td[i].block_base;
             s->td[i].uvblock[0] = s->td[i].uvblock_base[0];
             s->td[i].uvblock[1] = s->td[i].uvblock_base[1];
@@ -1440,103 +1468,20 @@ FF_ENABLE_DEPRECATION_WARNINGS
             }
         }
 
+        s->m_row = 0;
+        s->row_ready = 0;
+
         if (avctx->active_thread_type == FF_THREAD_FRAME)
             num_jobs = 1;
         else
             num_jobs = s->s.h.tiling.tile_cols;
-
-        avctx->execute2(avctx, decode_tiles, s->td, NULL, num_jobs);
+        av_log(avctx, AV_LOG_DEBUG, "threads =  %d\n", avctx->thread_count);
+        avctx->execute3(avctx, decode_tiles, loopfilter_proc, s->td, NULL, num_jobs);
         av_log(avctx, AV_LOG_DEBUG, "tile cols =  %d\n", s->s.h.tiling.tile_cols);
-        
+
         for (i = 0; i < s->s.h.tiling.tile_cols; i++)
             for (j = 0; j < sizeof(s->td[i].counts) / sizeof(unsigned); j++)
                 ((unsigned *)&s->counts)[j] += ((unsigned *)&s->td[i].counts)[j];
-        /*
-        for (i = 0; i < s->s.h.tiling.tile_cols; i++) {
-            for (j = 0; j < 4; j++)
-                for (k = 0; k < 2; k++)
-                    for (l = 0; l < 2; l++)
-                        for (m = 0; m < 6; m++)
-                            for (n = 0; n < 6; n++) {
-                                for (o = 0; o < 3; o++)
-                                    s->counts.coef[j][k][l][m][n][o] += s->td[i].counts.coef[j][k][l][m][n][o];
-                                
-                                for (p = 0; p < 2; p++)
-                                    s->counts.eob[j][k][l][m][n][p] += s->td[i].counts.eob[j][k][l][m][n][p];
-                            }
-
-            for (j = 0; j < 4; j++)
-                for (k = 0; k < 4; k++)
-                    for (l = 0; l < 4; l++)
-                        s->counts.partition[j][k][l] += s->td[i].counts.partition[j][k][l];
-
-            for (j = 0; j < 4; j++) {
-                s->counts.mv_joint[j] += s->td[i].counts.mv_joint[j];
-                for (k = 0; k < 10; k++)
-                    s->counts.y_mode[j][k] += s->td[i].counts.y_mode[j][k];
-                    
-                for (k = 0; k < 3; k++) {
-                    s->counts.filter[j][k] += s->td[i].counts.filter[j][k];
-                }
-                for (k = 0; k < 2; k++)
-                    s->counts.intra[j][k] += s->td[i].counts.intra[j][k];
-            }
-
-            for (j = 0; j < 2; j++) {
-                for (k = 0; k < 4; k++)
-                    s->counts.tx32p[j][k] += s->td[i].counts.tx32p[j][k];
-                
-                for (k = 0; k < 3; k++)
-                    s->counts.tx16p[j][k] += s->td[i].counts.tx16p[j][k];
-                
-                for (k = 0; k < 2; k++)
-                    s->counts.tx8p[j][k] += s->td[i].counts.tx8p[j][k];
-            }
-
-            for (j = 0; j < 5; j++) {
-                for (k = 0; k < 2; k++) {
-                    s->counts.comp[j][k] += s->td[i].counts.comp[j][k];
-                    s->counts.comp_ref[j][k] += s->td[i].counts.comp_ref[j][k];
-                    
-                    for (l = 0; l < 2; l++)
-                        s->counts.single_ref[j][k][l] += s->td[i].counts.single_ref[j][k][l];
-                }
-            }
-
-            for (j = 0; j < 7; j++)
-                for (k = 0; k < 4; k++)
-                    s->counts.mv_mode[j][k] += s->td[i].counts.mv_mode[j][k];
-
-            for (j = 0; j < 3; j++)
-                for (k = 0; k < 2; k++)
-                    s->counts.skip[j][k] += s->td[i].counts.skip[j][k];
-
-            for (j = 0; j < 2; j++) {
-                for (k = 0; k < 2; k++) {
-                    s->counts.mv_comp[j].sign[k] += s->td[i].counts.mv_comp[j].sign[k];
-                    s->counts.mv_comp[j].class0[k] += s->td[i].counts.mv_comp[j].class0[k];
-                    s->counts.mv_comp[j].hp[k] += s->td[i].counts.mv_comp[j].hp[k];
-                    s->counts.mv_comp[j].class0_hp[k] += s->td[i].counts.mv_comp[j].class0_hp[k];
-                    for (l = 0; l < 4; l++) {
-                        s->counts.mv_comp[j].class0_fp[k][l] += s->td[i].counts.mv_comp[j].class0_fp[k][l];
-                    }
-                }
-
-                for (k = 0; k < 4; k++)
-                    s->counts.mv_comp[j].fp[k] += s->td[i].counts.mv_comp[j].fp[k];
-                
-                for (k = 0; k < 11; k++)
-                    s->counts.mv_comp[j].classes[k] += s->td[i].counts.mv_comp[j].classes[k];
-                
-                for (k = 0; k < 10; k++)
-                    for (l = 0; l < 2; l++)
-                        s->counts.mv_comp[j].bits[k][l] += s->td[i].counts.mv_comp[j].bits[k][l];
-            }
-            
-            for (j = 0; j < 10; j++)
-                for (k = 0; k < 10; k++)
-                    s->counts.uv_mode[j][k] += s->td[i].counts.uv_mode[j][k];
-        }*/
 
         if (s->pass < 2 && s->s.h.refreshctx && !s->s.h.parallelmode) {
             ff_vp9_adapt_probs(s);
