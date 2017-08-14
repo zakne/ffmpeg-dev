@@ -176,7 +176,7 @@ int ff_slice_thread_init(AVCodecContext *avctx)
 
     avctx->execute = thread_execute;
     avctx->execute2 = thread_execute2;
-    avctx->execute3 = thread_execute3;
+//    avctx->execute3 = thread_execute3;
     return 0;
 }
 

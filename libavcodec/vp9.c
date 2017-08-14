@@ -1470,13 +1470,15 @@ FF_ENABLE_DEPRECATION_WARNINGS
 
         s->m_row = 0;
         s->row_ready = 0;
+        pthread_mutex_init(&s->mutex, NULL);
+        pthread_cond_init(&s->cond, NULL);
 
         if (avctx->active_thread_type == FF_THREAD_FRAME)
             num_jobs = 1;
         else
             num_jobs = s->s.h.tiling.tile_cols;
         av_log(avctx, AV_LOG_DEBUG, "threads =  %d\n", avctx->thread_count);
-        avctx->execute3(avctx, decode_tiles, loopfilter_proc, s->td, NULL, num_jobs);
+        avctx->execute2(avctx, decode_tiles, s->td, NULL, num_jobs);
         av_log(avctx, AV_LOG_DEBUG, "tile cols =  %d\n", s->s.h.tiling.tile_cols);
 
         for (i = 0; i < s->s.h.tiling.tile_cols; i++)
