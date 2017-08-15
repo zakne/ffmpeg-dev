@@ -1137,7 +1137,7 @@ int decode_tiles(AVCodecContext *avctx, void *tdata, int jobnr,
     int row, col;
     VP9Context *s = avctx->priv_data;
     VP9TileData *td = &s->td[jobnr];
-    VP9Filter *lflvl_ptr2 = td->lflvl_ptr+s->sb_cols;
+    VP9Filter *lflvl_ptr2 = td->lflvl_ptr+s->sb_cols*2;
     ptrdiff_t uvoff, yoff, ls_y, ls_uv;
     AVFrame *f;
     uvoff = td->uvoff;
