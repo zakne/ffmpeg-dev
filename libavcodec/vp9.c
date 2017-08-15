@@ -1478,7 +1478,7 @@ FF_ENABLE_DEPRECATION_WARNINGS
         else
             num_jobs = s->s.h.tiling.tile_cols;
         av_log(avctx, AV_LOG_DEBUG, "threads =  %d\n", avctx->thread_count);
-        avctx->execute3(avctx, decode_tiles, loopfilter, s->td, NULL, num_jobs);
+        avctx->execute3(avctx, decode_tiles, loopfilter_proc, s->td, NULL, num_jobs);
         av_log(avctx, AV_LOG_DEBUG, "tile cols =  %d\n", s->s.h.tiling.tile_cols);
 
         for (i = 0; i < s->s.h.tiling.tile_cols; i++)
