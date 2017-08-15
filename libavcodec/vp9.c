@@ -1248,7 +1248,7 @@ static int loopfilter_proc(AVCodecContext *avctx) {
     int col;
     int bytesperpixel = s->bytesperpixel;
     //loopfilter one row
-    for (int i = 0; i < 2; i++) {
+    for (int i = 0; i < 4; i++) {
         pthread_mutex_lock(&s->mutex);
         while (!s->row_ready)
             pthread_cond_wait(&s->cond, &s->mutex);
