@@ -1160,7 +1160,7 @@ int decode_tiles(AVCodecContext *avctx, void *tdata, int jobnr,
         if (s->pass != 2) {
             memcpy(&td->c, &td->c_b[tile_row], sizeof(td->c));
             for (row = tile_row_start; row < tile_row_end;
-                 row += 8, yoff += ls_y * 64, uvoff += ls_uv * 64 >> s->ss_v, lflvl_ptr += s->sb_cols) {
+                 row += 8, yoff += ls_y * 64, uvoff += ls_uv * 64 >> s->ss_v) {
                 ptrdiff_t yoff2 = yoff, uvoff2 = uvoff;
                 if (s->pass != 2) {
                     memset(td->left_partition_ctx, 0, 8);
@@ -1216,6 +1216,8 @@ int decode_tiles(AVCodecContext *avctx, void *tdata, int jobnr,
                 pthread_cond_signal(&s->cond);
                 if (row != 0 && row%10 == 0)
                     lflvl_ptr = td->lflvl_ptr;
+                else
+                    lflvl_ptr = td->lflvl_ptr+s->sb_cols*(row/8);
                 // FIXME maybe we can make this more finegrained by running the
                 // loopfilter per-block instead of after each sbrow
                 // In fact that would also make intra pred left preparation easier?
