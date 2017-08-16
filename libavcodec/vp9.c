@@ -1245,7 +1245,8 @@ static int loopfilter_proc(AVCodecContext *avctx) {
     //loopfilter one row
     for (i = 0; i < s->sb_rows; i++) {
         pthread_mutex_lock(&s->mutex);
-        while (atomic_load_explicit(&s->m_row[i], memory_order_relaxed) < s->s.h.tiling.log2_tile_cols)
+        av_log(avctx, AV_LOG_DEBUG, "s->s.h.tiling.log2_tile_cols = %d\n", s->s.h.tiling.log2_tile_cols);
+        while (atomic_load_explicit(&s->m_row[i], memory_order_relaxed) != s->s.h.tiling.log2_tile_cols)
             pthread_cond_wait(&s->cond, &s->mutex);
         
         if (s->s.h.filter.level) {
