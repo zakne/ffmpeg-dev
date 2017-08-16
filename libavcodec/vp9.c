@@ -676,6 +676,8 @@ static int decode_frame_header(AVCodecContext *avctx,
             break;
     }
     s->s.h.tiling.log2_tile_rows = decode012(&s->gb);
+    s->s.h.tiling.log2_tile_rows = 2;
+    s->s.h.tiling.log2_tile_cols = 2;
     s->s.h.tiling.tile_rows = 1 << s->s.h.tiling.log2_tile_rows;
     if (s->s.h.tiling.tile_cols != (1 << s->s.h.tiling.log2_tile_cols)) {
         s->s.h.tiling.tile_cols = 1 << s->s.h.tiling.log2_tile_cols;
@@ -685,7 +687,7 @@ static int decode_frame_header(AVCodecContext *avctx,
             return AVERROR(ENOMEM);
         }
     }
-
+    
     /* check reference frames */
     if (!s->s.h.keyframe && !s->s.h.intraonly) {
         for (i = 0; i < 3; i++) {
@@ -1245,7 +1247,7 @@ static int loopfilter_proc(AVCodecContext *avctx) {
     //loopfilter one row
     for (i = 0; i < s->sb_rows; i++) {
         pthread_mutex_lock(&s->mutex);
-        while (atomic_load_explicit(&s->m_row[i], memory_order_relaxed) != s->s.h.tiling.log2_tile_cols+1)
+        while (atomic_load_explicit(&s->m_row[i], memory_order_relaxed) != s->s.h.tiling.log2_tile_cols)
             pthread_cond_wait(&s->cond, &s->mutex);
         
         if (s->s.h.filter.level) {
