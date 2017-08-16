@@ -176,7 +176,7 @@ static int update_size(AVCodecContext *avctx, int w, int h)
     // FIXME we slightly over-allocate here for subsampled chroma, but a little
     // bit of padding shouldn't affect performance...
     p = av_malloc(s->sb_cols * (128 + 192 * bytesperpixel +
-                                6*sizeof(*s->lflvl) + 16 * sizeof(*s->above_mv_ctx)));
+                                10*sizeof(*s->lflvl) + 16 * sizeof(*s->above_mv_ctx)));
     if (!p)
         return AVERROR(ENOMEM);
     assign(s->intra_pred_data[0],  uint8_t *,             64 * bytesperpixel);
@@ -195,7 +195,7 @@ static int update_size(AVCodecContext *avctx, int w, int h)
     assign(s->above_comp_ctx,      uint8_t *,              8);
     assign(s->above_ref_ctx,       uint8_t *,              8);
     assign(s->above_filter_ctx,    uint8_t *,              8);
-    assign(s->lflvl,               VP9Filter *,            6);
+    assign(s->lflvl,               VP9Filter *,            10);
 #undef assign
 
     // these will be re-allocated a little later
@@ -1160,7 +1160,7 @@ int decode_tiles(AVCodecContext *avctx, void *tdata, int jobnr,
         if (s->pass != 2) {
             memcpy(&td->c, &td->c_b[tile_row], sizeof(td->c));
             for (row = tile_row_start; row < tile_row_end;
-                 row += 8, yoff += ls_y * 64, uvoff += ls_uv * 64 >> s->ss_v) {
+                 row += 8, yoff += ls_y * 64, uvoff += ls_uv * 64 >> s->ss_v, lflvl_ptr += s->sb_cols) {
                 ptrdiff_t yoff2 = yoff, uvoff2 = uvoff;
                 if (s->pass != 2) {
                     memset(td->left_partition_ctx, 0, 8);
@@ -1214,7 +1214,6 @@ int decode_tiles(AVCodecContext *avctx, void *tdata, int jobnr,
 
                 atomic_fetch_add_explicit(&s->m_row[row/8], 1, memory_order_relaxed);
                 pthread_cond_signal(&s->cond);
-                lflvl_ptr += s->sb_cols;
                 if (row == 40)
                     lflvl_ptr = td->lflvl_ptr;
                 // FIXME maybe we can make this more finegrained by running the
@@ -1475,6 +1474,8 @@ FF_ENABLE_DEPRECATION_WARNINGS
             num_jobs = 1;
         else
             num_jobs = s->s.h.tiling.tile_cols;
+        av_log(avctx, AV_LOG_DEBUG, "sbrows =  %d\n", s->sb_rows);
+        av_log(avctx, AV_LOG_DEBUG, "sbcols =  %d\n", s->sb_cols);
         av_log(avctx, AV_LOG_DEBUG, "threads =  %d\n", avctx->thread_count);
         avctx->execute3(avctx, decode_tiles, loopfilter_proc, s->td, NULL, num_jobs);
         av_log(avctx, AV_LOG_DEBUG, "tile cols =  %d\n", s->s.h.tiling.tile_cols);
