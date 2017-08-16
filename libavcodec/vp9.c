@@ -1217,7 +1217,7 @@ int decode_tiles(AVCodecContext *avctx, void *tdata, int jobnr,
                 pthread_cond_signal(&s->cond);
                 if (row != 0 && c == 5) {
                     lflvl_ptr = td->lflvl_ptr;
-                    c = 1;
+                    c = 0;
                 }
                 else
                     lflvl_ptr = td->lflvl_ptr+s->sb_cols*c;
