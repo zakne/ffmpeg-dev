@@ -176,7 +176,7 @@ static int update_size(AVCodecContext *avctx, int w, int h)
     // FIXME we slightly over-allocate here for subsampled chroma, but a little
     // bit of padding shouldn't affect performance...
     p = av_malloc(s->sb_cols * (128 + 192 * bytesperpixel +
-                                4*sizeof(*s->lflvl) + 16 * sizeof(*s->above_mv_ctx)));
+                                s->sb_rows*sizeof(*s->lflvl) + 16 * sizeof(*s->above_mv_ctx)));
     if (!p)
         return AVERROR(ENOMEM);
     assign(s->intra_pred_data[0],  uint8_t *,             64 * bytesperpixel);
@@ -195,7 +195,7 @@ static int update_size(AVCodecContext *avctx, int w, int h)
     assign(s->above_comp_ctx,      uint8_t *,              8);
     assign(s->above_ref_ctx,       uint8_t *,              8);
     assign(s->above_filter_ctx,    uint8_t *,              8);
-    assign(s->lflvl,               VP9Filter *,            4);
+    assign(s->lflvl,               VP9Filter *,            s->sb_rows);
 #undef assign
 
     // these will be re-allocated a little later
@@ -1152,6 +1152,7 @@ int decode_tiles(AVCodecContext *avctx, void *tdata, int jobnr,
     set_tile_offset(&tile_col_start, &tile_col_end,
                     jobnr, s->s.h.tiling.log2_tile_cols, s->sb_cols);
     td->tile_col_start  = tile_col_start;
+    VP9Filter *lflvl_ptr = td->lflvl_ptr;
     for (tile_row = 0; tile_row < s->s.h.tiling.tile_rows; tile_row++) {
         set_tile_offset(&tile_row_start, &tile_row_end,
                         tile_row, s->s.h.tiling.log2_tile_rows, s->sb_rows);
@@ -1159,8 +1160,7 @@ int decode_tiles(AVCodecContext *avctx, void *tdata, int jobnr,
         if (s->pass != 2) {
             memcpy(&td->c, &td->c_b[tile_row], sizeof(td->c));
             for (row = tile_row_start; row < tile_row_end;
-                 row += 8, yoff += ls_y * 64, uvoff += ls_uv * 64 >> s->ss_v) {
-                VP9Filter *lflvl_ptr = td->lflvl_ptr;
+                 row += 8, yoff += ls_y * 64, uvoff += ls_uv * 64 >> s->ss_v, lflvl_ptr += s->sb_cols) {
                 ptrdiff_t yoff2 = yoff, uvoff2 = uvoff;
                 if (s->pass != 2) {
                     memset(td->left_partition_ctx, 0, 8);
@@ -1235,7 +1235,7 @@ static int loopfilter_proc(AVCodecContext *avctx) {
     ls_y = f->linesize[0];
     ls_uv =f->linesize[1];
     //loopfilter one row
-    for (i = 0; i < 1; i++) {
+    for (i = 0; i < 2; i++) {
         pthread_mutex_lock(&s->mutex);
         while (atomic_load_explicit(&s->m_row[i], memory_order_relaxed) < s->s.h.tiling.log2_tile_cols)
             pthread_cond_wait(&s->cond, &s->mutex);
@@ -1243,7 +1243,7 @@ static int loopfilter_proc(AVCodecContext *avctx) {
         if (s->s.h.filter.level) {
             yoff2 = (ls_y * 64)*i;
             uvoff2 =  (ls_uv * 64 >> s->ss_v)*i;
-            lflvl_ptr = s->lflvl;
+            lflvl_ptr = s->lflvl+s->sb_cols*i;
             for (col = 0; col < s->cols;
                  col += 8, yoff2 += 64 * bytesperpixel,
                  uvoff2 += 64 * bytesperpixel >> s->ss_h, lflvl_ptr++) {
