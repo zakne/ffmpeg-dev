@@ -20,6 +20,7 @@
  * License along with FFmpeg; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
  */
+#include <stdatomic.h>
 
 #include "avcodec.h"
 #include "get_bits.h"
@@ -1227,10 +1228,14 @@ int decode_tiles(AVCodecContext *avctx, void *tdata, int jobnr,
 
 static int loopfilter_proc(AVCodecContext *avctx) {
     VP9Context *s = avctx->priv_data;
-    ptrdiff_t uvoff2, yoff2;
+    ptrdiff_t uvoff2, yoff2, ls_y, ls_uv;
     VP9Filter *lflvl_ptr;
     int col, i;
+    AVFrame *f;
     int bytesperpixel = s->bytesperpixel;
+    f = s->s.frames[CUR_FRAME].tf.f;
+    ls_y = f->linesize[0];
+    ls_uv =f->linesize[1];
     //loopfilter one row
     for (i = 0; i < 1; i++) {
         pthread_mutex_lock(&s->mutex);
