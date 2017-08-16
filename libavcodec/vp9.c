@@ -1162,6 +1162,7 @@ int decode_tiles(AVCodecContext *avctx, void *tdata, int jobnr,
             memcpy(&td->c, &td->c_b[tile_row], sizeof(td->c));
             for (row = tile_row_start; row < tile_row_end;
                  row += 8, yoff += ls_y * 64, uvoff += ls_uv * 64 >> s->ss_v, c++) {
+                av_log(avctx, AV_LOG_DEBUG, "jobnr = %d, lflvl_ptr = %x\n", jobnr, lflvl_ptr);
                 ptrdiff_t yoff2 = yoff, uvoff2 = uvoff;
                 if (s->pass != 2) {
                     memset(td->left_partition_ctx, 0, 8);
@@ -1247,11 +1248,12 @@ static int loopfilter_proc(AVCodecContext *avctx) {
         pthread_mutex_lock(&s->mutex);
         while (atomic_load_explicit(&s->m_row[i], memory_order_relaxed) < s->s.h.tiling.log2_tile_cols)
             pthread_cond_wait(&s->cond, &s->mutex);
-
+        
         if (s->s.h.filter.level) {
             yoff2 = (ls_y * 64)*i;
             uvoff2 =  (ls_uv * 64 >> s->ss_v)*i;
             lflvl_ptr = s->lflvl+s->sb_cols*i;
+            av_log(avctx, AV_LOG_DEBUG, "loopfilter_proc, lflvl_ptr = %x\n", lflvl_ptr);
             for (col = 0; col < s->cols;
                  col += 8, yoff2 += 64 * bytesperpixel,
                  uvoff2 += 64 * bytesperpixel >> s->ss_h, lflvl_ptr++) {
