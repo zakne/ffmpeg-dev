@@ -1215,7 +1215,7 @@ int decode_tiles(AVCodecContext *avctx, void *tdata, int jobnr,
                 av_log(avctx, AV_LOG_DEBUG, "jobnr = %d, lflvl_ptr = %x\n", jobnr, lflvl_ptr);
                 atomic_fetch_add_explicit(&s->m_row[row/8], 1, memory_order_relaxed);
                 pthread_cond_signal(&s->cond);
-                if (row != 0 && c == 10) {
+                if (row != 0 && c == 20) {
                     lflvl_ptr = td->lflvl_ptr;
                     c = 1;
                 }
