@@ -1214,7 +1214,7 @@ int decode_tiles(AVCodecContext *avctx, void *tdata, int jobnr,
 
                 atomic_fetch_add_explicit(&s->m_row[row/8], 1, memory_order_relaxed);
                 pthread_cond_signal(&s->cond);
-                lflvl_ptr = td->lflvl_ptr+s->sb_cols*((row/8)%2);
+                lflvl_ptr = td->lflvl_ptr+s->sb_cols*((row/8)%4);
                 // FIXME maybe we can make this more finegrained by running the
                 // loopfilter per-block instead of after each sbrow
                 // In fact that would also make intra pred left preparation easier?
@@ -1244,7 +1244,7 @@ static int loopfilter_proc(AVCodecContext *avctx) {
         if (s->s.h.filter.level) {
             yoff2 = (ls_y * 64)*i;
             uvoff2 =  (ls_uv * 64 >> s->ss_v)*i;
-            lflvl_ptr = s->lflvl+s->sb_cols*(i%2);
+            lflvl_ptr = s->lflvl+s->sb_cols*(i%4);
             for (col = 0; col < s->cols;
                  col += 8, yoff2 += 64 * bytesperpixel,
                  uvoff2 += 64 * bytesperpixel >> s->ss_h, lflvl_ptr++) {
