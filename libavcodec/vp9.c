@@ -1137,7 +1137,6 @@ int decode_tiles(AVCodecContext *avctx, void *tdata, int jobnr,
     int row, col;
     VP9Context *s = avctx->priv_data;
     VP9TileData *td = &s->td[jobnr];
-    VP9Filter *lflvl_ptr2 = td->lflvl_ptr+s->sb_cols*2;
     ptrdiff_t uvoff, yoff, ls_y, ls_uv;
     AVFrame *f;
     uvoff = td->uvoff;
@@ -1213,24 +1212,9 @@ int decode_tiles(AVCodecContext *avctx, void *tdata, int jobnr,
                            f->data[2] + uvoff + ((64 >> s->ss_v) - 1) * ls_uv,
                            8 * tiles_cols * bytesperpixel >> s->ss_h);
                 }
-                
-                pthread_mutex_lock(&s->mutex);
-                s->m_row++;
-                if (s->m_row == s->s.h.tiling.tile_cols) {
-                    s->cur_lflvl_ptr = s->td[0].lflvl_ptr;
-                    s->cur_row = row;
-                    s->cur_uvoff = s->td[0].uvoff;
-                    s->cur_yoff = s->td[0].yoff;
-                    s->m_row = 0;
-                    s->row_ready = 1;
-                    pthread_cond_signal(&s->cond);
-                }
-                pthread_mutex_unlock(&s->mutex);
-                VP9Filter *tmp = td->lflvl_ptr;
-                td->lflvl_ptr = lflvl_ptr2;
-                lflvl_ptr2 = tmp;
-                td->yoff = yoff;
-                td->uvoff = uvoff;
+
+                atomic_fetch_add_explicit(&s->m_row[row/8], 1, memory_order_relaxed);
+                pthread_cond_signal(&s->cond);
                 // FIXME maybe we can make this more finegrained by running the
                 // loopfilter per-block instead of after each sbrow
                 // In fact that would also make intra pred left preparation easier?
@@ -1245,26 +1229,25 @@ static int loopfilter_proc(AVCodecContext *avctx) {
     VP9Context *s = avctx->priv_data;
     ptrdiff_t uvoff2, yoff2;
     VP9Filter *lflvl_ptr;
-    int col;
+    int col, i;
     int bytesperpixel = s->bytesperpixel;
     //loopfilter one row
-    for (int i = 0; i < 2; i++) {
+    for (i = 0; i < 1; i++) {
         pthread_mutex_lock(&s->mutex);
-        while (!s->row_ready)
+        while (atomic_load_explicit(&s->m_row[i], memory_order_relaxed) != s->s.h.tiling.log2_tile_cols)
             pthread_cond_wait(&s->cond, &s->mutex);
 
         if (s->s.h.filter.level) {
-            yoff2 = s->cur_yoff;
-            uvoff2 = s->cur_uvoff;
-            lflvl_ptr = s->cur_lflvl_ptr;
+            yoff2 = (ls_y * 64)*i;
+            uvoff2 =  (ls_uv * 64 >> s->ss_v)*i;
+            lflvl_ptr = s->lflvl;
             for (col = 0; col < s->cols;
                  col += 8, yoff2 += 64 * bytesperpixel,
                  uvoff2 += 64 * bytesperpixel >> s->ss_h, lflvl_ptr++) {
-                ff_vp9_loopfilter_sb(avctx, lflvl_ptr, s->cur_row, col,
+                ff_vp9_loopfilter_sb(avctx, lflvl_ptr, i*8, col,
                                      yoff2, uvoff2);
             }
         }
-        s->row_ready = 0;
         pthread_mutex_unlock(&s->mutex);
     }
     return 0;
@@ -1406,7 +1389,11 @@ FF_ENABLE_DEPRECATION_WARNINGS
     } else if (!s->s.h.refreshctx) {
         ff_thread_finish_setup(avctx);
     }
-    
+
+    s->m_row = av_malloc_array(s->sb_rows, sizeof(atomic_int));
+    for (i = 0; i < s->sb_rows; i++)
+        atomic_init(&s->m_row[i], 0);
+
     for (i = 0; i < s->s.h.tiling.tile_cols; i++) {
         s->td[i].c_b = av_malloc_array(s->s.h.tiling.tile_rows, sizeof(VP56RangeCoder));
         if (!s->td[i].c_b) {
