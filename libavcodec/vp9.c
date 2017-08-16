@@ -1243,7 +1243,7 @@ static int loopfilter_proc(AVCodecContext *avctx) {
     ls_y = f->linesize[0];
     ls_uv =f->linesize[1];
     //loopfilter one row
-    for (i = 0; i < 5; i++) {
+    for (i = 0; i < s->sb_rows; i++) {
         pthread_mutex_lock(&s->mutex);
         while (atomic_load_explicit(&s->m_row[i], memory_order_relaxed) < s->s.h.tiling.log2_tile_cols)
             pthread_cond_wait(&s->cond, &s->mutex);
@@ -1251,7 +1251,7 @@ static int loopfilter_proc(AVCodecContext *avctx) {
         if (s->s.h.filter.level) {
             yoff2 = (ls_y * 64)*i;
             uvoff2 =  (ls_uv * 64 >> s->ss_v)*i;
-            lflvl_ptr = s->lflvl+s->sb_cols*i;
+            lflvl_ptr = s->lflvl+s->sb_cols*(i%9);
             av_log(avctx, AV_LOG_DEBUG, "loopfilter_proc, lflvl_ptr = %x\n", lflvl_ptr);
             for (col = 0; col < s->cols;
                  col += 8, yoff2 += 64 * bytesperpixel,
