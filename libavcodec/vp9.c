@@ -1214,7 +1214,7 @@ int decode_tiles(AVCodecContext *avctx, void *tdata, int jobnr,
 
                 atomic_fetch_add_explicit(&s->m_row[row/8], 1, memory_order_relaxed);
                 pthread_cond_signal(&s->cond);
-                if (row == 40)
+                if (row%10 == 0)
                     lflvl_ptr = td->lflvl_ptr;
                 // FIXME maybe we can make this more finegrained by running the
                 // loopfilter per-block instead of after each sbrow
