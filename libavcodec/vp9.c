@@ -1211,7 +1211,8 @@ int decode_tiles(AVCodecContext *avctx, void *tdata, int jobnr,
                            f->data[2] + uvoff + ((64 >> s->ss_v) - 1) * ls_uv,
                            8 * tiles_cols * bytesperpixel >> s->ss_h);
                 }
-
+                if (row == 80)
+                    lflvl_ptr = td->lflvl_ptr;
                 atomic_fetch_add_explicit(&s->m_row[row/8], 1, memory_order_relaxed);
                 pthread_cond_signal(&s->cond);
                 // FIXME maybe we can make this more finegrained by running the
