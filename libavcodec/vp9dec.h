@@ -26,6 +26,7 @@
 
 #include <stddef.h>
 #include <stdint.h>
+#include <stdatomic.h>
 
 #include "libavutil/buffer.h"
 #include "libavutil/thread.h"
