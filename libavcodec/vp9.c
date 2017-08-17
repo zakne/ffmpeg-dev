@@ -1517,9 +1517,9 @@ finish:
         *got_frame = 1;
     }
     for (i = 0; i < s->s.h.tiling.tile_cols; i++) {
-        av_freep(&s->td[i].c_b);
+        av_free(&s->td[i].c_b);
     }
-    av_freep(&s->td);
+    av_free(&s->td);
     return pkt->size;
 }
 
