@@ -96,8 +96,6 @@ typedef struct VP9Context {
     VideoDSPContext vdsp;
     GetBitContext gb;
     VP56RangeCoder c;
-    unsigned td_size;
-    unsigned c_b_size[4];
     VP9Block *b_base, *b;
     int pass;
 
