@@ -1210,8 +1210,8 @@ int decode_tiles(AVCodecContext *avctx, void *tdata, int jobnr,
                            f->data[2] + uvoff + ((64 >> s->ss_v) - 1) * ls_uv,
                            8 * tiles_cols * bytesperpixel >> s->ss_h);
                 }
-                pthread_barrier_wait(&s->barrier);
                 av_log(avctx, AV_LOG_DEBUG, "jobnr = %d, lflvl_ptr = %x\n", jobnr, lflvl_ptr);
+                av_log(avctx, AV_LOG_DEBUG, "jobnr = %d, m_row[%d] = %d\n", jobnr, i, atomic_load_explicit(&s->m_row[i], memory_order_relaxed));
                 atomic_fetch_add_explicit(&s->m_row[row/8], 1, memory_order_relaxed);
                 pthread_cond_signal(&s->cond);
                 if (row != 0 && c == 4) {
@@ -1220,7 +1220,7 @@ int decode_tiles(AVCodecContext *avctx, void *tdata, int jobnr,
                 }
                 else
                     lflvl_ptr = td->lflvl_ptr+s->sb_cols*c;
-                
+                pthread_barrier_wait(&s->barrier);
                 // FIXME maybe we can make this more finegrained by running the
                 // loopfilter per-block instead of after each sbrow
                 // In fact that would also make intra pred left preparation easier?
