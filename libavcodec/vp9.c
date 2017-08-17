@@ -1487,6 +1487,7 @@ FF_ENABLE_DEPRECATION_WARNINGS
         av_log(avctx, AV_LOG_DEBUG, "sbrows =  %d\n", s->sb_rows);
         av_log(avctx, AV_LOG_DEBUG, "sbcols =  %d\n", s->sb_cols);
         av_log(avctx, AV_LOG_DEBUG, "threads =  %d\n", avctx->thread_count);
+        av_log(avctx, AV_LOG_DEBUG, "m_row[0] =  %d\n", atomic_load_explicit(&s->m_row[0], memory_order_relaxed));
         avctx->execute3(avctx, decode_tiles, loopfilter_proc, s->td, NULL, num_jobs);
         av_log(avctx, AV_LOG_DEBUG, "tile cols =  %d\n", s->s.h.tiling.tile_cols);
 
