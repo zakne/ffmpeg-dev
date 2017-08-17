@@ -1215,7 +1215,7 @@ int decode_tiles(AVCodecContext *avctx, void *tdata, int jobnr,
                 av_log(avctx, AV_LOG_DEBUG, "jobnr = %d, lflvl_ptr = %x\n", jobnr, lflvl_ptr);
                 atomic_fetch_add_explicit(&s->m_row[row/8], 1, memory_order_relaxed);
                 pthread_cond_signal(&s->cond);
-                if (row != 0 && c == 3) {
+                if (row != 0 && c == 4) {
                     lflvl_ptr = td->lflvl_ptr;
                     c = 0;
                 }
@@ -1253,7 +1253,7 @@ static int loopfilter_proc(AVCodecContext *avctx) {
         if (s->s.h.filter.level) {
             yoff2 = (ls_y * 64)*i;
             uvoff2 =  (ls_uv * 64 >> s->ss_v)*i;
-            lflvl_ptr = s->lflvl+s->sb_cols*(i%3);
+            lflvl_ptr = s->lflvl+s->sb_cols*(i%4);
             av_log(avctx, AV_LOG_DEBUG, "loopfilter_proc, lflvl_ptr = %x\n", lflvl_ptr);
             for (col = 0; col < s->cols;
                  col += 8, yoff2 += 64 * bytesperpixel,
