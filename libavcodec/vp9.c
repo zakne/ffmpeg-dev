@@ -176,7 +176,7 @@ static int update_size(AVCodecContext *avctx, int w, int h)
     // FIXME we slightly over-allocate here for subsampled chroma, but a little
     // bit of padding shouldn't affect performance...
     p = av_malloc(s->sb_cols * (128 + 192 * bytesperpixel +
-                                3*sizeof(*s->lflvl) + 16 * sizeof(*s->above_mv_ctx)));
+                                4*sizeof(*s->lflvl) + 16 * sizeof(*s->above_mv_ctx)));
     if (!p)
         return AVERROR(ENOMEM);
     assign(s->intra_pred_data[0],  uint8_t *,             64 * bytesperpixel);
@@ -195,7 +195,7 @@ static int update_size(AVCodecContext *avctx, int w, int h)
     assign(s->above_comp_ctx,      uint8_t *,              8);
     assign(s->above_ref_ctx,       uint8_t *,              8);
     assign(s->above_filter_ctx,    uint8_t *,              8);
-    assign(s->lflvl,               VP9Filter *,            3);
+    assign(s->lflvl,               VP9Filter *,            4);
 #undef assign
 
     // these will be re-allocated a little later
@@ -1210,6 +1210,7 @@ int decode_tiles(AVCodecContext *avctx, void *tdata, int jobnr,
                            f->data[2] + uvoff + ((64 >> s->ss_v) - 1) * ls_uv,
                            8 * tiles_cols * bytesperpixel >> s->ss_h);
                 }
+                pthread_barrier_wait(&s->barrier);
                 av_log(avctx, AV_LOG_DEBUG, "jobnr = %d, lflvl_ptr = %x\n", jobnr, lflvl_ptr);
                 atomic_fetch_add_explicit(&s->m_row[row/8], 1, memory_order_relaxed);
                 pthread_cond_signal(&s->cond);
@@ -1219,7 +1220,7 @@ int decode_tiles(AVCodecContext *avctx, void *tdata, int jobnr,
                 }
                 else
                     lflvl_ptr = td->lflvl_ptr+s->sb_cols*c;
-                pthread_barrier_wait(&s->barrier);
+                
                 // FIXME maybe we can make this more finegrained by running the
                 // loopfilter per-block instead of after each sbrow
                 // In fact that would also make intra pred left preparation easier?
