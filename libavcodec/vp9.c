@@ -1211,7 +1211,7 @@ int decode_tiles(AVCodecContext *avctx, void *tdata, int jobnr,
                            8 * tiles_cols * bytesperpixel >> s->ss_h);
                 }
                 av_log(avctx, AV_LOG_DEBUG, "jobnr = %d, lflvl_ptr = %x\n", jobnr, lflvl_ptr);
-                av_log(avctx, AV_LOG_DEBUG, "jobnr = %d, m_row[%d] = %d\n", jobnr, i, atomic_load_explicit(&s->m_row[i], memory_order_relaxed));
+                av_log(avctx, AV_LOG_DEBUG, "jobnr = %d, m_row[%d] = %d\n", jobnr, row/8, atomic_load_explicit(&s->m_row[row/8], memory_order_relaxed));
                 atomic_fetch_add_explicit(&s->m_row[row/8], 1, memory_order_relaxed);
                 pthread_cond_signal(&s->cond);
                 if (row != 0 && c == 4) {
