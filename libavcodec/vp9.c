@@ -1476,6 +1476,7 @@ FF_ENABLE_DEPRECATION_WARNINGS
 
         pthread_mutex_init(&s->mutex, NULL);
         pthread_cond_init(&s->cond, NULL);
+        pthread_barrier_init(&s->barrier, NULL, avctx->thread_count);
 
         if (avctx->active_thread_type == FF_THREAD_FRAME)
             num_jobs = 1;
