@@ -1121,7 +1121,7 @@ static av_cold int vp9_decode_free(AVCodecContext *avctx)
             ff_thread_release_buffer(avctx, &s->next_refs[i]);
         av_frame_free(&s->next_refs[i].f);
     }
-    av_log(avctx, "FREE-------------\n");
+    av_log(avctx, AV_LOG_DEBUG, "FREE-------------\n");
     free_buffers(s);
     av_freep(&s->td);
     for (i = 0; i < s->s.h.tiling.tile_cols; i++)
