@@ -103,6 +103,7 @@ typedef struct VP9Context {
 
     pthread_mutex_t mutex;
     pthread_cond_t cond;
+    pthread_barrier_t barrier;
 
     atomic_int *m_row;
 
