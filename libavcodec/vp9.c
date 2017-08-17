@@ -1213,8 +1213,8 @@ int decode_tiles(AVCodecContext *avctx, void *tdata, int jobnr,
                 av_log(avctx, AV_LOG_DEBUG, "jobnr = %d, lflvl_ptr = %x\n", jobnr, lflvl_ptr);
                 av_log(avctx, AV_LOG_DEBUG, "jobnr = %d, m_row[%d] = %d\n", jobnr, row/8, atomic_load_explicit(&s->m_row[row/8], memory_order_relaxed));
                 atomic_fetch_add_explicit(&s->m_row[row/8], 1, memory_order_relaxed);
-                if (atomic_load_explicit(&s->m_row[row/8], memory_order_relaxed) == 2)
-                    pthread_cond_signal(&s->cond);
+                //if (atomic_load_explicit(&s->m_row[row/8], memory_order_relaxed) == 2)
+                    //pthread_cond_signal(&s->cond);
                 if (row != 0 && c == 4) {
                     lflvl_ptr = td->lflvl_ptr;
                     c = 0;
@@ -1245,10 +1245,7 @@ static int loopfilter_proc(AVCodecContext *avctx) {
     //loopfilter one row
     for (i = 0; i < s->sb_rows; i++) {
         pthread_mutex_lock(&s->mutex);
-        while (atomic_load_explicit(&s->m_row[i], memory_order_relaxed) != s->s.h.tiling.log2_tile_cols+1) {
-            pthread_cond_wait(&s->cond, &s->mutex);
-            av_log(avctx, AV_LOG_DEBUG, "log2_tile_cols = %d, m_row[%d] = %d\n", s->s.h.tiling.log2_tile_cols, i, atomic_load_explicit(&s->m_row[i], memory_order_relaxed));
-        }
+        while (atomic_load_explicit(&s->m_row[i], memory_order_relaxed) != s->s.h.tiling.log2_tile_cols+1);
 
         if (s->s.h.filter.level) {
             yoff2 = (ls_y * 64)*i;
