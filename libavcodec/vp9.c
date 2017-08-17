@@ -1123,7 +1123,6 @@ static av_cold int vp9_decode_free(AVCodecContext *avctx)
     }
     av_log(avctx, AV_LOG_DEBUG, "FREE-------------\n");
     free_buffers(s);
-    av_freep(&s->m_row);
     av_freep(&s->td);
     return 0;
 }
@@ -1521,7 +1520,7 @@ finish:
     pthread_mutex_destroy(&s->mutex);
     pthread_cond_destroy(&s->cond);
     pthread_barrier_destroy(&s->barrier);
-
+    av_free(&s->m_row);
     return pkt->size;
 }
 
