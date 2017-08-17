@@ -1123,6 +1123,7 @@ static av_cold int vp9_decode_free(AVCodecContext *avctx)
     }
     av_log(avctx, AV_LOG_DEBUG, "FREE-------------\n");
     free_buffers(s);
+    av_freep(&s->m_row);
     av_freep(&s->td);
     return 0;
 }
@@ -1401,12 +1402,12 @@ FF_ENABLE_DEPRECATION_WARNINGS
         ff_thread_finish_setup(avctx);
     }
 
-    s->m_row = av_malloc_array(s->sb_rows, sizeof(atomic_int));
+    s->m_row = av_malloc(s->sb_rows*sizeof(atomic_int));
     for (i = 0; i < s->sb_rows; i++)
         atomic_init(&s->m_row[i], 0);
 
     for (i = 0; i < s->s.h.tiling.tile_cols; i++) {
-        s->td[i].c_b = av_malloc_array(s->s.h.tiling.tile_rows, sizeof(VP56RangeCoder));
+        s->td[i].c_b = av_malloc(s->s.h.tiling.tile_rows*sizeof(VP56RangeCoder));
         if (!s->td[i].c_b) {
             av_log(avctx, AV_LOG_ERROR, "Ran out of memory during range coder init\n");
             return AVERROR(ENOMEM);
