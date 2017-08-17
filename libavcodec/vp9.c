@@ -1520,7 +1520,7 @@ finish:
     pthread_mutex_destroy(&s->mutex);
     pthread_cond_destroy(&s->cond);
     pthread_barrier_destroy(&s->barrier);
-    av_free(&s->m_row);
+    av_freep(&s->m_row);
     return pkt->size;
 }
 
