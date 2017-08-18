@@ -1049,7 +1049,7 @@ static void decode_sb_mem(VP9TileData *td, int row, int col, VP9Filter *lflvl,
     if (bl == BL_8X8) {
         av_assert2(b->bl == BL_8X8);
         ff_vp9_decode_block(td, row, col, lflvl, yoff, uvoff, b->bl, b->bp);
-    } else if (s->b->bl == bl) {
+    } else if (s->td[0].b->bl == bl) {
         ff_vp9_decode_block(td, row, col, lflvl, yoff, uvoff, b->bl, b->bp);
         if (b->bp == PARTITION_H && row + hbs < s->rows) {
             yoff  += hbs * 8 * y_stride;
