@@ -1243,7 +1243,7 @@ static int loopfilter_proc(AVCodecContext *avctx) {
         pthread_mutex_lock(&s->mutex);
         while (atomic_load_explicit(&s->m_row[i], memory_order_relaxed) != s->s.h.tiling.log2_tile_cols+1)
             pthread_cond_wait(&s->cond, &s->mutex);
-
+        pthread_mutex_unlock(&s->mutex);
         if (s->s.h.filter.level) {
             yoff2 = (ls_y * 64)*i;
             uvoff2 =  (ls_uv * 64 >> s->ss_v)*i;
@@ -1255,7 +1255,7 @@ static int loopfilter_proc(AVCodecContext *avctx) {
                                      yoff2, uvoff2);
             }
         }
-        pthread_mutex_unlock(&s->mutex);
+        
     }
     return 0;
 }
@@ -1471,7 +1471,7 @@ FF_ENABLE_DEPRECATION_WARNINGS
 
         pthread_mutex_init(&s->mutex, NULL);
         pthread_cond_init(&s->cond, NULL);
-        pthread_barrier_init(&s->barrier, NULL, avctx->thread_count+1);
+        pthread_barrier_init(&s->barrier, NULL, avctx->thread_count);
 
         if (avctx->active_thread_type == FF_THREAD_FRAME)
             num_jobs = 1;
