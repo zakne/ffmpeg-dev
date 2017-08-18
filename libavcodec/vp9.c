@@ -1128,7 +1128,7 @@ static av_cold int vp9_decode_free(AVCodecContext *avctx)
     return 0;
 }
 
-void decode_tiles(AVCodecContext *avctx) 
+static int decode_tiles(AVCodecContext *avctx) 
 {
     VP9Context *s = avctx->priv_data;
     VP9TileData *td = &s->td[0];
@@ -1229,6 +1229,7 @@ void decode_tiles(AVCodecContext *avctx)
             ff_thread_report_progress(&s->s.frames[CUR_FRAME].tf, row >> 3, 0);
         }
     }
+    return 0;
 }
 
 
