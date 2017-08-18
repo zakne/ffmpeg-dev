@@ -1097,9 +1097,9 @@ static void free_buffers(VP9Context *s)
 
     av_freep(&s->intra_pred_data[0]);
     for (i = 0; i < s->s.h.tiling.tile_cols; i++) {
-      //  av_freep(&s->td[i].c_b);
-        //av_freep(&s->td[i].b_base); 
-        //av_freep(&s->td[i].block_base);
+        av_freep(&s->td[i].c_b);
+        av_freep(&s->td[i].b_base); 
+        av_freep(&s->td[i].block_base);
     }
 }
 
