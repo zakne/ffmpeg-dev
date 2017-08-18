@@ -176,7 +176,7 @@ static int update_size(AVCodecContext *avctx, int w, int h)
     // FIXME we slightly over-allocate here for subsampled chroma, but a little
     // bit of padding shouldn't affect performance...
     p = av_malloc(s->sb_cols * (128 + 192 * bytesperpixel +
-                                8*sizeof(*s->lflvl) + 16 * sizeof(*s->above_mv_ctx)));
+                                4*sizeof(*s->lflvl) + 16 * sizeof(*s->above_mv_ctx)));
     if (!p)
         return AVERROR(ENOMEM);
     assign(s->intra_pred_data[0],  uint8_t *,             64 * bytesperpixel);
@@ -195,12 +195,12 @@ static int update_size(AVCodecContext *avctx, int w, int h)
     assign(s->above_comp_ctx,      uint8_t *,              8);
     assign(s->above_ref_ctx,       uint8_t *,              8);
     assign(s->above_filter_ctx,    uint8_t *,              8);
-    assign(s->lflvl,               VP9Filter *,            8);
+    assign(s->lflvl,               VP9Filter *,            4);
 #undef assign
 
     // these will be re-allocated a little later
-    av_freep(&s->b_base);
-    av_freep(&s->block_base);
+    //av_freep(&s->b_base);
+    //av_freep(&s->block_base);
 
     if (s->s.h.bpp != s->last_bpp) {
         ff_vp9dsp_init(&s->dsp, s->s.h.bpp, avctx->flags & AV_CODEC_FLAG_BITEXACT);
@@ -217,7 +217,7 @@ static int update_block_buffers(AVCodecContext *avctx)
     VP9Context *s = avctx->priv_data;
     int chroma_blocks, chroma_eobs, bytesperpixel = s->bytesperpixel;
 
-    if (s->b_base && s->block_base && s->block_alloc_using_2pass == s->s.frames[CUR_FRAME].uses_2pass)
+    if (s->td[0].b_base && s->td[0].block_base && s->block_alloc_using_2pass == s->s.frames[CUR_FRAME].uses_2pass)
         return 0;
 
     chroma_blocks = 64 * 64 >> (s->ss_h + s->ss_v);
@@ -225,16 +225,16 @@ static int update_block_buffers(AVCodecContext *avctx)
     if (s->s.frames[CUR_FRAME].uses_2pass) {
         int sbs = s->sb_cols * s->sb_rows;
 
-        s->b_base = av_malloc_array(s->cols * s->rows, sizeof(VP9Block));
-        s->block_base = av_mallocz(((64 * 64 + 2 * chroma_blocks) * bytesperpixel * sizeof(int16_t) +
+        s->td[0].b_base = av_malloc_array(s->cols * s->rows, sizeof(VP9Block));
+        s->td[0].block_base = av_mallocz(((64 * 64 + 2 * chroma_blocks) * bytesperpixel * sizeof(int16_t) +
                                     16 * 16 + 2 * chroma_eobs) * sbs);
-        if (!s->b_base || !s->block_base)
+        if (!s->td[0].b_base || !s->td[0].block_base)
             return AVERROR(ENOMEM);
-        s->uvblock_base[0] = s->block_base + sbs * 64 * 64 * bytesperpixel;
-        s->uvblock_base[1] = s->uvblock_base[0] + sbs * chroma_blocks * bytesperpixel;
-        s->eob_base = (uint8_t *) (s->uvblock_base[1] + sbs * chroma_blocks * bytesperpixel);
-        s->uveob_base[0] = s->eob_base + 16 * 16 * sbs;
-        s->uveob_base[1] = s->uveob_base[0] + chroma_eobs * sbs;
+        s->td[0].uvblock_base[0] = s->td[0].block_base + sbs * 64 * 64 * bytesperpixel;
+        s->td[0].uvblock_base[1] = s->td[0].uvblock_base[0] + sbs * chroma_blocks * bytesperpixel;
+        s->td[0].eob_base = (uint8_t *) (s->td[0].uvblock_base[1] + sbs * chroma_blocks * bytesperpixel);
+        s->td[0].uveob_base[0] = s->td[0].eob_base + 16 * 16 * sbs;
+        s->td[0].uveob_base[1] = s->td[0].uveob_base[0] + chroma_eobs * sbs;
     } else {
         for (i = 0; i < s->s.h.tiling.tile_cols; i++) {
             s->td[i].b_base = av_malloc(sizeof(VP9Block));
@@ -685,6 +685,15 @@ static int decode_frame_header(AVCodecContext *avctx,
             av_log(avctx, AV_LOG_ERROR, "Ran out of memory during tile init\n");
             return AVERROR(ENOMEM);
         }
+
+        for (i = 0; i < s->s.h.tiling.tile_cols; i++) {
+            s->td[i].s = s;
+            s->td[i].c_b = av_malloc(s->s.h.tiling.tile_rows*sizeof(VP56RangeCoder));
+            if (!s->td[i].c_b) {
+                av_log(avctx, AV_LOG_ERROR, "Ran out of memory during range coder init\n");
+                return AVERROR(ENOMEM);
+            }
+        }
     }
     
     /* check reference frames */
@@ -1124,131 +1133,114 @@ static av_always_inline
 int decode_tiles(AVCodecContext *avctx, void *tdata, int jobnr,
                               int threadnr)
 {
-    int row, col;
     VP9Context *s = avctx->priv_data;
     VP9TileData *td = &s->td[jobnr];
     ptrdiff_t uvoff, yoff, ls_y, ls_uv;
     AVFrame *f;
-    uvoff = td->uvoff;
-    yoff = td->yoff;
-    int c = 1;
-    int bytesperpixel = s->bytesperpixel;
-    int tile_row;
+    int row, col, tile_row, c;
+    int bytesperpixel;
     int tile_row_start, tile_row_end, tile_col_start, tile_col_end;
 
     f = s->s.frames[CUR_FRAME].tf.f;
     ls_y = f->linesize[0];
     ls_uv =f->linesize[1];
-
+    bytesperpixel = s->bytesperpixel;
+    c = 1;
+    
     set_tile_offset(&tile_col_start, &tile_col_end,
                     jobnr, s->s.h.tiling.log2_tile_cols, s->sb_cols);
     td->tile_col_start  = tile_col_start;
-    VP9Filter *lflvl_ptr = td->lflvl_ptr;
+    VP9Filter *lflvl_base_ptr = s->lflvl+tile_col_start/8;
+    VP9Filter *lflvl_ptr = lflvl_base_ptr;
+    uvoff = (ls_uv * 64 >> s->ss_v)*tile_col_start/8;
+    yoff = (ls_y * 64)*tile_col_start/8;
     for (tile_row = 0; tile_row < s->s.h.tiling.tile_rows; tile_row++) {
         set_tile_offset(&tile_row_start, &tile_row_end,
                         tile_row, s->s.h.tiling.log2_tile_rows, s->sb_rows);
 
-        if (s->pass != 2) {
-            memcpy(&td->c, &td->c_b[tile_row], sizeof(td->c));
-            for (row = tile_row_start; row < tile_row_end;
-                 row += 8, yoff += ls_y * 64, uvoff += ls_uv * 64 >> s->ss_v, c++) {
-                ptrdiff_t yoff2 = yoff, uvoff2 = uvoff;
-                if (s->pass != 2) {
-                    memset(td->left_partition_ctx, 0, 8);
-                    memset(td->left_skip_ctx, 0, 8);
-                    if (s->s.h.keyframe || s->s.h.intraonly) {
-                        memset(td->left_mode_ctx, DC_PRED, 16);
-                    } else {
-                        memset(td->left_mode_ctx, NEARESTMV, 8);
-                    }
-                    memset(td->left_y_nnz_ctx, 0, 16);
-                    memset(td->left_uv_nnz_ctx, 0, 32);
-                    memset(td->left_segpred_ctx, 0, 8);
-                }
+        memcpy(&td->c, &td->c_b[tile_row], sizeof(td->c));
 
-                for (col = tile_col_start;
-                     col < tile_col_end;
-                     col += 8, yoff2 += 64 * bytesperpixel,
-                     uvoff2 += 64 * bytesperpixel >> s->ss_h, lflvl_ptr++) {
-                    // FIXME integrate with lf code (i.e. zero after each
-                    // use, similar to invtxfm coefficients, or similar)
-                    if (s->pass != 1) {
-                        memset(lflvl_ptr->mask, 0, sizeof(lflvl_ptr->mask));
-                    }
+        for (row = tile_row_start; row < tile_row_end;
+             row += 8, yoff += ls_y * 64, uvoff += ls_uv * 64 >> s->ss_v, c++) {
+            ptrdiff_t yoff2 = yoff, uvoff2 = uvoff;
 
-                    if (s->pass == 2) {
-                        decode_sb_mem(td, row, col, lflvl_ptr,
-                                      yoff2, uvoff2, BL_64X64);
-                    } else {
-                        decode_sb(td, row, col, lflvl_ptr,
-                                  yoff2, uvoff2, BL_64X64);
-                    }
-                }
-
-                if (s->pass == 1)
-                    continue;
-
-                // backup pre-loopfilter reconstruction data for intra
-                // prediction of next row of sb64s
-                unsigned tiles_cols = tile_col_end - tile_col_start;
-                if (row + 8 < s->rows) {
-                    memcpy(s->intra_pred_data[0] + (tile_col_start * 8 * bytesperpixel),
-                           f->data[0] + yoff + 63 * ls_y,
-                           8 * tiles_cols * bytesperpixel);
-                    memcpy(s->intra_pred_data[1] + (tile_col_start * 8 * bytesperpixel >> s->ss_h),
-                           f->data[1] + uvoff + ((64 >> s->ss_v) - 1) * ls_uv,
-                           8 * tiles_cols * bytesperpixel >> s->ss_h);
-                    memcpy(s->intra_pred_data[2] + (tile_col_start * 8 * bytesperpixel >> s->ss_h),
-                           f->data[2] + uvoff + ((64 >> s->ss_v) - 1) * ls_uv,
-                           8 * tiles_cols * bytesperpixel >> s->ss_h);
-                }
-                atomic_fetch_add_explicit(&s->m_row[row/8], 1, memory_order_relaxed);
-                pthread_cond_signal(&s->cond);
-                if (row != 0 && c == 8) {
-                    lflvl_ptr = td->lflvl_ptr;
-                    c = 0;
-                }
-                else
-                    lflvl_ptr = td->lflvl_ptr+s->sb_cols*c;
-                pthread_barrier_wait(&s->barrier);
-                // FIXME maybe we can make this more finegrained by running the
-                // loopfilter per-block instead of after each sbrow
-                // In fact that would also make intra pred left preparation easier?
-                ff_thread_report_progress(&s->s.frames[CUR_FRAME].tf, row >> 3, 0);
+            memset(td->left_partition_ctx, 0, 8);
+            memset(td->left_skip_ctx, 0, 8);
+            if (s->s.h.keyframe || s->s.h.intraonly) {
+                memset(td->left_mode_ctx, DC_PRED, 16);
+            } else {
+                memset(td->left_mode_ctx, NEARESTMV, 8);
             }
+            memset(td->left_y_nnz_ctx, 0, 16);
+            memset(td->left_uv_nnz_ctx, 0, 32);
+            memset(td->left_segpred_ctx, 0, 8);
+
+            for (col = tile_col_start;
+                 col < tile_col_end;
+                 col += 8, yoff2 += 64 * bytesperpixel,
+                 uvoff2 += 64 * bytesperpixel >> s->ss_h, lflvl_ptr++) {
+                // FIXME integrate with lf code (i.e. zero after each
+                // use, similar to invtxfm coefficients, or similar)
+                memset(lflvl_ptr->mask, 0, sizeof(lflvl_ptr->mask));
+                decode_sb(td, row, col, lflvl_ptr,
+                            yoff2, uvoff2, BL_64X64);
+            }
+
+            // backup pre-loopfilter reconstruction data for intra
+            // prediction of next row of sb64s
+            unsigned tiles_cols = tile_col_end - tile_col_start;
+            if (row + 8 < s->rows) {
+                memcpy(s->intra_pred_data[0] + (tile_col_start * 8 * bytesperpixel),
+                       f->data[0] + yoff + 63 * ls_y,
+                       8 * tiles_cols * bytesperpixel);
+                memcpy(s->intra_pred_data[1] + (tile_col_start * 8 * bytesperpixel >> s->ss_h),
+                       f->data[1] + uvoff + ((64 >> s->ss_v) - 1) * ls_uv,
+                       8 * tiles_cols * bytesperpixel >> s->ss_h);
+                memcpy(s->intra_pred_data[2] + (tile_col_start * 8 * bytesperpixel >> s->ss_h),
+                       f->data[2] + uvoff + ((64 >> s->ss_v) - 1) * ls_uv,
+                       8 * tiles_cols * bytesperpixel >> s->ss_h);
+            }
+            ff_thread_report_progress2(avctx, row/8, 0, 1);
+            if (row != 0 && c == 4) {
+                lflvl_ptr = lflvl_base_ptr;
+                c = 0;
+            }
+            else
+                lflvl_ptr = lflvl_base_ptr+s->sb_cols*c;
         }
     }
     return 0;
 }
 
-static int loopfilter_proc(AVCodecContext *avctx) {
+static av_always_inline
+int loopfilter_proc(AVCodecContext *avctx)
+{
     VP9Context *s = avctx->priv_data;
-    ptrdiff_t uvoff2, yoff2, ls_y, ls_uv;
+    ptrdiff_t uvoff, yoff, ls_y, ls_uv;
     VP9Filter *lflvl_ptr;
-    int col, i;
+    int bytesperpixel, col, i;
     AVFrame *f;
-    int bytesperpixel = s->bytesperpixel;
+
+    bytesperpixel = s->bytesperpixel;
     f = s->s.frames[CUR_FRAME].tf.f;
     ls_y = f->linesize[0];
     ls_uv =f->linesize[1];
+
     //loopfilter one row
     for (i = 0; i < s->sb_rows; i++) {
-        pthread_mutex_lock(&s->mutex);
-        while (atomic_load_explicit(&s->m_row[i], memory_order_relaxed) != s->s.h.tiling.tile_cols)
-            pthread_cond_wait(&s->cond, &s->mutex);
-        
+        ff_thread_await_progress3(avctx, i, 0, s->s.h.tiling.log2_tile_cols);
+
         if (s->s.h.filter.level) {
-            yoff2 = (ls_y * 64)*i;
-            uvoff2 =  (ls_uv * 64 >> s->ss_v)*i;
-            lflvl_ptr = s->lflvl+s->sb_cols*(i%8);
+            yoff = (ls_y * 64)*i;
+            uvoff =  (ls_uv * 64 >> s->ss_v)*i;
+            lflvl_ptr = s->lflvl+s->sb_cols*(i%4);
             for (col = 0; col < s->cols;
-                 col += 8, yoff2 += 64 * bytesperpixel,
-                 uvoff2 += 64 * bytesperpixel >> s->ss_h, lflvl_ptr++) {
+                 col += 8, yoff += 64 * bytesperpixel,
+                 uvoff += 64 * bytesperpixel >> s->ss_h, lflvl_ptr++) {
                 ff_vp9_loopfilter_sb(avctx, lflvl_ptr, i*8, col,
-                                     yoff2, uvoff2);
+                                     yoff, uvoff);
             }
         }
-        pthread_mutex_unlock(&s->mutex);
     }
     return 0;
 }
@@ -1390,24 +1382,9 @@ FF_ENABLE_DEPRECATION_WARNINGS
         ff_thread_finish_setup(avctx);
     }
 
-    s->m_row = av_malloc(s->sb_rows*sizeof(atomic_int));
-    for (i = 0; i < s->sb_rows; i++)
-        atomic_init(&s->m_row[i], 0);
-
-    for (i = 0; i < s->s.h.tiling.tile_cols; i++) {
-        s->td[i].c_b = av_malloc(s->s.h.tiling.tile_rows*sizeof(VP56RangeCoder));
-        if (!s->td[i].c_b) {
-            av_log(avctx, AV_LOG_ERROR, "Ran out of memory during range coder init\n");
-            return AVERROR(ENOMEM);
-        }
-    }
-
     do {
-        yoff = uvoff = 0;
-        VP9Filter *lflvl_ptr = s->lflvl;
-
         for (i = 0; i < s->s.h.tiling.tile_cols; i++) {
-            s->td[i].b = s->td[i].b_base;   
+            s->td[i].b = s->td[i].b_base;
             s->td[i].block = s->td[i].block_base;
             s->td[i].uvblock[0] = s->td[i].uvblock_base[0];
             s->td[i].uvblock[1] = s->td[i].uvblock_base[1];
@@ -1446,31 +1423,14 @@ FF_ENABLE_DEPRECATION_WARNINGS
             }
         }
 
-        if (s->pass != 2) {
-            for (tile_col = 0; tile_col < s->s.h.tiling.tile_cols; tile_col++) {
-                set_tile_offset(&tile_col_start, &tile_col_end,
-                                tile_col, s->s.h.tiling.log2_tile_cols, s->sb_cols);
-
-                s->td[tile_col].yoff = yoff;
-                s->td[tile_col].uvoff = uvoff;
-                s->td[tile_col].s = s;
-                s->td[tile_col].lflvl_ptr = lflvl_ptr;
-
-                for (col = tile_col_start; col < tile_col_end; col += 8,
-                    yoff += 64 * bytesperpixel,
-                   uvoff += 64 * bytesperpixel >> s->ss_h, lflvl_ptr++);
-            }
-        }
-
-        pthread_mutex_init(&s->mutex, NULL);
-        pthread_cond_init(&s->cond, NULL);
-        pthread_barrier_init(&s->barrier, NULL, avctx->thread_count);
+        ff_alloc_entries(avctx, s->sb_rows);
 
         if (avctx->active_thread_type == FF_THREAD_FRAME)
             num_jobs = 1;
         else
             num_jobs = s->s.h.tiling.tile_cols;
-        
+
+        ff_reset_entries(avctx);
         avctx->execute3(avctx, decode_tiles, loopfilter_proc, s->td, NULL, num_jobs);
 
         for (i = 1; i < s->s.h.tiling.tile_cols; i++)
@@ -1500,10 +1460,6 @@ finish:
         *got_frame = 1;
     }
 
-    pthread_mutex_destroy(&s->mutex);
-    pthread_cond_destroy(&s->cond);
-    pthread_barrier_destroy(&s->barrier);
-    av_freep(&s->m_row);
     return pkt->size;
 }
 

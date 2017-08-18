@@ -96,14 +96,7 @@ typedef struct VP9Context {
     VideoDSPContext vdsp;
     GetBitContext gb;
     VP56RangeCoder c;
-    VP9Block *b_base, *b;
     int pass;
-
-    pthread_mutex_t mutex;
-    pthread_cond_t cond;
-    pthread_barrier_t barrier;
-
-    atomic_int *m_row;
 
     uint8_t ss_h, ss_v;
     uint8_t last_bpp, bpp_index, bytesperpixel;
@@ -151,10 +144,6 @@ typedef struct VP9Context {
 
     // block reconstruction intermediates
     int block_alloc_using_2pass;
-    DECLARE_ALIGNED(32, uint8_t, tmp_y)[64 * 64 * 2];
-    DECLARE_ALIGNED(32, uint8_t, tmp_uv)[2][64 * 64 * 2];
-    int16_t *block_base, *block, *uvblock_base[2], *uvblock[2];
-    uint8_t *eob_base, *uveob_base[2], *eob, *uveob[2];
     uint16_t mvscale[3][2];
     uint8_t mvstep[3][2];
 } VP9Context;
@@ -165,7 +154,7 @@ typedef struct VP9TileData {
     VP56RangeCoder c;
     int row, row7, col, col7;
     uint8_t *dst[3];
-    ptrdiff_t y_stride, uv_stride, yoff, uvoff;
+    ptrdiff_t y_stride, uv_stride;
     VP9Block *b_base, *b;
     unsigned tile_col_start;
 

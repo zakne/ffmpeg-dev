@@ -207,6 +207,18 @@ void ff_thread_await_progress2(AVCodecContext *avctx, int field, int thread, int
     pthread_mutex_unlock(&p->progress_mutex[thread]);
 }
 
+void ff_thread_await_progress3(AVCodecContext *avctx, int field, int thread, int shift)
+{
+    SliceThreadContext *p  = avctx->internal->thread_ctx;
+    int *entries      = p->entries;
+    
+    pthread_mutex_lock(&p->progress_mutex[thread]);
+    while ((entries[field]) != shift){
+        pthread_cond_wait(&p->progress_cond[thread], &p->progress_mutex[thread]);
+    }
+    pthread_mutex_unlock(&p->progress_mutex[thread]);
+}
+
 int ff_alloc_entries(AVCodecContext *avctx, int count)
 {
     int i;

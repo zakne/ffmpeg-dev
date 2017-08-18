@@ -104,7 +104,7 @@ static void find_ref_mvs(VP9TileData *td,
             av_assert2(idx == 1);                                      \
             av_assert2(mem != INVALID_MV);                             \
             if (mem_sub8x8 == INVALID_MV) {                            \
-                clamp_mv(&tmp, &mv, td);                                \
+                clamp_mv(&tmp, &mv, td);                               \
                 m = AV_RN32A(&tmp);                                    \
                 if (m != mem) {                                        \
                     AV_WN32A(pmv, m);                                  \
@@ -112,7 +112,7 @@ static void find_ref_mvs(VP9TileData *td,
                 }                                                      \
                 mem_sub8x8 = AV_RN32A(&mv);                            \
             } else if (mem_sub8x8 != AV_RN32A(&mv)) {                  \
-                clamp_mv(&tmp, &mv, td);                                \
+                clamp_mv(&tmp, &mv, td);                               \
                 m = AV_RN32A(&tmp);                                    \
                 if (m != mem) {                                        \
                     AV_WN32A(pmv, m);                                  \
@@ -125,12 +125,12 @@ static void find_ref_mvs(VP9TileData *td,
         } else {                                                       \
             uint32_t m = AV_RN32A(&mv);                                \
             if (!idx) {                                                \
-                clamp_mv(pmv, &mv, td);                                 \
+                clamp_mv(pmv, &mv, td);                                \
                 return;                                                \
             } else if (mem == INVALID_MV) {                            \
                 mem = m;                                               \
             } else if (m != mem) {                                     \
-                clamp_mv(pmv, &mv, td);                                 \
+                clamp_mv(pmv, &mv, td);                                \
                 return;                                                \
             }                                                          \
         }                                                              \
