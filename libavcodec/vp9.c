@@ -1209,8 +1209,10 @@ int decode_tiles(AVCodecContext *avctx, void *tdata, int jobnr,
                            f->data[2] + uvoff + ((64 >> s->ss_v) - 1) * ls_uv,
                            8 * tiles_cols * bytesperpixel >> s->ss_h);
                 }
+                pthread_mutex_lock(&s->mutex);
                 atomic_fetch_add_explicit(&s->m_row[row/8], 1, memory_order_relaxed);
                 pthread_cond_signal(&s->cond);
+                pthread_mutex_unlock(&s->mutex);
                 if (row != 0 && c == 8) {
                     lflvl_ptr = td->lflvl_ptr;
                     c = 0;
