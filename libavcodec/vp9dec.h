@@ -129,34 +129,6 @@ typedef struct VP9Context {
         ProbContext p;
         uint8_t coef[4][2][2][6][6][11];
     } prob;
-    struct {
-        unsigned y_mode[4][10];
-        unsigned uv_mode[10][10];
-        unsigned filter[4][3];
-        unsigned mv_mode[7][4];
-        unsigned intra[4][2];
-        unsigned comp[5][2];
-        unsigned single_ref[5][2][2];
-        unsigned comp_ref[5][2];
-        unsigned tx32p[2][4];
-        unsigned tx16p[2][3];
-        unsigned tx8p[2][2];
-        unsigned skip[3][2];
-        unsigned mv_joint[4];
-        struct {
-            unsigned sign[2];
-            unsigned classes[11];
-            unsigned class0[2];
-            unsigned bits[10][2];
-            unsigned class0_fp[2][4];
-            unsigned fp[4];
-            unsigned class0_hp[2];
-            unsigned hp[2];
-        } mv_comp[2];
-        unsigned partition[4][4][4];
-        unsigned coef[4][2][2][6][6][3];
-        unsigned eob[4][2][2][6][6][2];
-    } counts;
 
     // contextual (above) cache
     uint8_t *above_partition_ctx;
