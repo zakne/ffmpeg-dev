@@ -265,7 +265,7 @@ int ff_alloc_entries(AVCodecContext *avctx, int count)
             pthread_mutex_init(&p->progress_mutex[i], NULL);
             pthread_cond_init(&p->progress_cond[i], NULL);
         }
-        pthread_barrier_init(&p->barrier);
+        pthread_barrier_init(&p->barrier, NULL, p->thread_count);
     }
 
     return 0;
