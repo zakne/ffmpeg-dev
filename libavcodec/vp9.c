@@ -751,13 +751,6 @@ static int decode_frame_header(AVCodecContext *avctx,
         return AVERROR_INVALIDDATA;
     }
 
-    if (s->s.h.keyframe || s->s.h.intraonly) {
-        memset(s->counts.coef, 0, sizeof(s->counts.coef));
-        memset(s->counts.eob,  0, sizeof(s->counts.eob));
-    } else {
-        memset(&s->counts, 0, sizeof(s->counts));
-    }
-    
     for (i = 0; i < s->s.h.tiling.tile_cols; i++) {
         if (s->s.h.keyframe || s->s.h.intraonly) {
             memset(s->td[i].counts.coef, 0, sizeof(s->counts.coef));
@@ -766,7 +759,7 @@ static int decode_frame_header(AVCodecContext *avctx,
             memset(&s->td[i].counts, 0, sizeof(s->counts));
         }
     }
-        
+
     /* FIXME is it faster to not copy here, but do it down in the fw updates
      * as explicit copies if the fw update is missing (and skip the copy upon
      * fw update)? */
