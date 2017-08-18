@@ -1147,7 +1147,7 @@ static int decode_tiles(AVCodecContext *avctx)
         set_tile_offset(&tile_row_start, &tile_row_end,
                         tile_row, s->s.h.tiling.log2_tile_rows, s->sb_rows);
 
-        for (row = tile_row_start; row < s->tile_row_end;
+        for (row = tile_row_start; row < tile_row_end;
              row += 8, yoff += ls_y * 64, uvoff += ls_uv * 64 >> s->ss_v) {
             VP9Filter *lflvl_ptr = s->lflvl;
             ptrdiff_t yoff2 = yoff, uvoff2 = uvoff;
