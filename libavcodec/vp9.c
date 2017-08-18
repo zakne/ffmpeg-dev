@@ -1137,12 +1137,13 @@ static int decode_tiles(AVCodecContext *avctx)
     int tile_row_start, tile_row_end, tile_col_start, tile_col_end;
     AVFrame *f;
     ptrdiff_t yoff, uvoff, ls_y, ls_uv;
-
+    
     f = s->s.frames[CUR_FRAME].tf.f;
     ls_y = f->linesize[0];
     ls_uv =f->linesize[1];
     bytesperpixel = s->bytesperpixel;
-
+    
+    yoff = uvoff = 0;
     for (tile_row = 0; tile_row < s->s.h.tiling.tile_rows; tile_row++) {
         set_tile_offset(&tile_row_start, &tile_row_end,
                         tile_row, s->s.h.tiling.log2_tile_rows, s->sb_rows);
