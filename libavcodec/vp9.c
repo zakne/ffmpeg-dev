@@ -1482,7 +1482,7 @@ FF_ENABLE_DEPRECATION_WARNINGS
 
         for (i = 1; i < s->s.h.tiling.tile_cols; i++)
             for (j = 0; j < sizeof(s->td[i].counts) / sizeof(unsigned); j++)
-                ((unsigned *)&s->td[0]->counts)[j] += ((unsigned *)&s->td[i].counts)[j];
+                ((unsigned *)&s->td[0].counts)[j] += ((unsigned *)&s->td[i].counts)[j];
 
         if (s->pass < 2 && s->s.h.refreshctx && !s->s.h.parallelmode) {
             ff_vp9_adapt_probs(s);
