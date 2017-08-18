@@ -1200,8 +1200,7 @@ int decode_tiles(AVCodecContext *avctx, void *tdata, int jobnr,
                        f->data[2] + uvoff + ((64 >> s->ss_v) - 1) * ls_uv,
                        8 * tiles_cols * bytesperpixel >> s->ss_h);
             }
-            ff_thread_report_progress2(avctx, row/8, 0, 1);
-            ff_thread_await_progress3(avctx, row/8, 0, s->s.h.tiling.tile_cols);
+            ff_thread_report_progress2(avctx, row/8, 1, 1);
             if (row != 0 && c == 4) {
                 lflvl_ptr = lflvl_base_ptr;
                 c = 0;
