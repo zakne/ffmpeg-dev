@@ -753,10 +753,10 @@ static int decode_frame_header(AVCodecContext *avctx,
 
     for (i = 0; i < s->s.h.tiling.tile_cols; i++) {
         if (s->s.h.keyframe || s->s.h.intraonly) {
-            memset(s->td[i].counts.coef, 0, sizeof(s->counts.coef));
-            memset(s->td[i].counts.eob,  0, sizeof(s->counts.eob));
+            memset(s->td[i].counts.coef, 0, sizeof(s->td[0].counts.coef));
+            memset(s->td[i].counts.eob,  0, sizeof(s->td[0].counts.eob));
         } else {
-            memset(&s->td[i].counts, 0, sizeof(s->counts));
+            memset(&s->td[i].counts, 0, sizeof(s->td[0].counts));
         }
     }
 
