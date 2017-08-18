@@ -1228,7 +1228,7 @@ int loopfilter_proc(AVCodecContext *avctx)
 
     //loopfilter one row
     for (i = 0; i < s->sb_rows; i++) {
-        ff_thread_await_progress3(avctx, i, 0, s->s.h.tiling.log2_tile_cols);
+        ff_thread_await_progress3(avctx, i, 0, s->s.h.tiling.tile_cols);
 
         if (s->s.h.filter.level) {
             yoff = (ls_y * 64)*i;
