@@ -1096,7 +1096,11 @@ static void free_buffers(VP9Context *s)
     int i;
 
     av_freep(&s->intra_pred_data[0]);
-
+    for (i = 0; i < s->s.h.tiling.tile_cols; i++) {
+        av_freep(&s->td[i].c_b);
+        av_freep(&s->td[i].b_base);
+        av_freep(&s->td[i].block_base);
+    }
 }
 
 static av_cold int vp9_decode_free(AVCodecContext *avctx)
@@ -1118,7 +1122,7 @@ static av_cold int vp9_decode_free(AVCodecContext *avctx)
         av_frame_free(&s->next_refs[i].f);
     }
     free_buffers(s);
-    //av_freep(&s->td);
+    av_freep(&s->td);
     return 0;
 }
 
@@ -1205,10 +1209,8 @@ int decode_tiles(AVCodecContext *avctx, void *tdata, int jobnr,
                            f->data[2] + uvoff + ((64 >> s->ss_v) - 1) * ls_uv,
                            8 * tiles_cols * bytesperpixel >> s->ss_h);
                 }
-                pthread_mutex_lock(&s->mutex);
                 atomic_fetch_add_explicit(&s->m_row[row/8], 1, memory_order_relaxed);
                 pthread_cond_signal(&s->cond);
-                pthread_mutex_unlock(&s->mutex);
                 if (row != 0 && c == 8) {
                     lflvl_ptr = td->lflvl_ptr;
                     c = 0;
@@ -1241,7 +1243,7 @@ static int loopfilter_proc(AVCodecContext *avctx) {
         pthread_mutex_lock(&s->mutex);
         while (atomic_load_explicit(&s->m_row[i], memory_order_relaxed) != s->s.h.tiling.tile_cols)
             pthread_cond_wait(&s->cond, &s->mutex);
-
+        
         if (s->s.h.filter.level) {
             yoff2 = (ls_y * 64)*i;
             uvoff2 =  (ls_uv * 64 >> s->ss_v)*i;
@@ -1475,7 +1477,7 @@ FF_ENABLE_DEPRECATION_WARNINGS
             num_jobs = 1;
         else
             num_jobs = s->s.h.tiling.tile_cols;
-
+        
         avctx->execute3(avctx, decode_tiles, loopfilter_proc, s->td, NULL, num_jobs);
 
         for (i = 0; i < s->s.h.tiling.tile_cols; i++)
@@ -1509,9 +1511,6 @@ finish:
     pthread_cond_destroy(&s->cond);
     pthread_barrier_destroy(&s->barrier);
     av_freep(&s->m_row);
-    for (i = 0; i < s->s.h.tiling.tile_cols; i++)
-        av_freep(&s->td[i].c_b);
-    av_freep(&s->td);
     return pkt->size;
 }
 
