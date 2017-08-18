@@ -1156,7 +1156,7 @@ static int decode_tiles(AVCodecContext *avctx)
             for (tile_col = 0; tile_col < s->s.h.tiling.tile_cols; tile_col++) {
                 set_tile_offset(&tile_col_start, &tile_col_end,
                                 tile_col, s->s.h.tiling.log2_tile_cols, s->sb_cols);
-
+                td->tile_col_start = tile_col_start;
                 if (s->pass != 2) {
                     memset(td->left_partition_ctx, 0, 8);
                     memset(td->left_skip_ctx, 0, 8);
