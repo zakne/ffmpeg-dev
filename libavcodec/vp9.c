@@ -1305,6 +1305,7 @@ int decode_tiles_mt(AVCodecContext *avctx, void *tdata, int jobnr,
                        f->data[2] + uvoff + ((64 >> s->ss_v) - 1) * ls_uv,
                        8 * tiles_cols * bytesperpixel >> s->ss_h);
             }
+            av_log(avctx, AV_LOG_DEBUG, "job_nr = %d, row = %d\n", jobnr, row/8);
             ff_thread_report_progress3(avctx, row/8, 0, 1);
             if (row != 0 && c == 4) {
                 lflvl_ptr = lflvl_base_ptr;
@@ -1334,7 +1335,7 @@ int loopfilter_proc(AVCodecContext *avctx)
     //loopfilter one row
     for (i = 0; i < s->sb_rows; i++) {
         ff_thread_await_progress3(avctx, i, 0, s->s.h.tiling.tile_cols);
-
+        av_log(avctx, AV_LOG_DEBUG, "--sb_row = %d loopfilter--\n", i);
         if (s->s.h.filter.level) {
             yoff = (ls_y * 64)*i;
             uvoff =  (ls_uv * 64 >> s->ss_v)*i;
