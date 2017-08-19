@@ -1333,7 +1333,7 @@ int loopfilter_proc(AVCodecContext *avctx)
     ls_y = f->linesize[0];
     ls_uv =f->linesize[1];
 
-    pthread_mutext_lock(&s->mutex);
+    pthread_mutex_lock(&s->mutex);
     //loopfilter one row
     for (i = 0; i < s->sb_rows; i++) {
         while(!s->row_ready)
