@@ -1305,7 +1305,9 @@ int decode_tiles_mt(AVCodecContext *avctx, void *tdata, int jobnr,
                        f->data[2] + uvoff + ((64 >> s->ss_v) - 1) * ls_uv,
                        8 * tiles_cols * bytesperpixel >> s->ss_h);
             }
-            ff_thread_report_progress3(avctx, row/8, 0, 1);
+            pthread_barrier_wait(&s->barrier);
+            s->row_ready = 1;
+            pthread_cond_signal(&s->cond);
             if (row != 0 && c == 4) {
                 lflvl_ptr = lflvl_base_ptr;
                 c = 0;
@@ -1331,10 +1333,11 @@ int loopfilter_proc(AVCodecContext *avctx)
     ls_y = f->linesize[0];
     ls_uv =f->linesize[1];
 
+    pthread_mutext_lock(&s->mutex);
     //loopfilter one row
     for (i = 0; i < s->sb_rows; i++) {
-        ff_thread_await_progress3(avctx, i, 0, s->s.h.tiling.tile_cols);
-
+        while(!s->row_ready)
+            pthread_cond_wait(&s->cond, &s->mutex);
         if (s->s.h.filter.level) {
             yoff = (ls_y * 64)*i;
             uvoff =  (ls_uv * 64 >> s->ss_v)*i;
@@ -1346,7 +1349,9 @@ int loopfilter_proc(AVCodecContext *avctx)
                                      yoff, uvoff);
             }
         }
+        s->row_ready = 0;
     }
+    pthread_mutex_unlock(&s->mutex);
     return 0;
 }
 
@@ -1482,6 +1487,10 @@ FF_ENABLE_DEPRECATION_WARNINGS
     } else if (!s->s.h.refreshctx) {
         ff_thread_finish_setup(avctx);
     }
+    
+    pthread_cond_init(&s->cond, NULL);
+    pthread_mutex_init(&s->mutex, NULL);
+    pthread_barrier_init(&s->barrier, NULL, avctx->thread_count);
 
     do {
         for (i = 0; i < s->s.h.tiling.tile_cols; i++) {
@@ -1524,10 +1533,8 @@ FF_ENABLE_DEPRECATION_WARNINGS
             }
         }
 
-        ff_alloc_entries(avctx, s->sb_rows);
-
+        
         if (avctx->active_thread_type == FF_THREAD_SLICE) {
-            ff_reset_entries(avctx);
             avctx->execute3(avctx, decode_tiles_mt, loopfilter_proc, s->td, NULL, s->s.h.tiling.tile_cols);
         } else {
             decode_tiles(avctx);
@@ -1560,6 +1567,10 @@ finish:
             return ret;
         *got_frame = 1;
     }
+
+pthread_cond_destroy(&s->cond);
+pthread_mutex_destroy(&s->mutex);
+pthread_barrier_destroy(&s->barrier);
 
     return pkt->size;
 }
