@@ -1333,9 +1333,10 @@ int loopfilter_proc(AVCodecContext *avctx)
     ls_y = f->linesize[0];
     ls_uv =f->linesize[1];
 
-    pthread_mutex_lock(&s->mutex);
+    
     //loopfilter one row
     for (i = 0; i < s->sb_rows; i++) {
+        pthread_mutex_lock(&s->mutex);
         while(!s->row_ready)
             pthread_cond_wait(&s->cond, &s->mutex);
         if (s->s.h.filter.level) {
@@ -1350,8 +1351,8 @@ int loopfilter_proc(AVCodecContext *avctx)
             }
         }
         s->row_ready = 0;
+        pthread_mutex_unlock(&s->mutex);    
     }
-    pthread_mutex_unlock(&s->mutex);
     return 0;
 }
 
