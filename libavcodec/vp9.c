@@ -1244,6 +1244,7 @@ int decode_tiles_mt(AVCodecContext *avctx, void *tdata, int jobnr,
     AVFrame *f;
     int row, col, tile_row;
     int bytesperpixel;
+    unsigned tile_cols_len;
     int tile_row_start, tile_row_end, tile_col_start, tile_col_end;
     VP9Filter *lflvl_ptr;
 
@@ -1266,7 +1267,7 @@ int decode_tiles_mt(AVCodecContext *avctx, void *tdata, int jobnr,
         memcpy(&td->c, &td->c_b[tile_row], sizeof(td->c));
 
         for (row = tile_row_start; row < tile_row_end;
-             row += 8, yoff += ls_y * 64, uvoff += ls_uv * 64 >> s->ss_v, lflvl_ptr += sb->cols) {
+             row += 8, yoff += ls_y * 64, uvoff += ls_uv * 64 >> s->ss_v, lflvl_ptr += s->sb_cols) {
             ptrdiff_t yoff2 = yoff, uvoff2 = uvoff;
 
             memset(td->left_partition_ctx, 0, 8);
@@ -1293,17 +1294,17 @@ int decode_tiles_mt(AVCodecContext *avctx, void *tdata, int jobnr,
 
             // backup pre-loopfilter reconstruction data for intra
             // prediction of next row of sb64s
-            unsigned tiles_cols = tile_col_end - tile_col_start;
+            tile_cols_len = tile_col_end - tile_col_start;
             if (row + 8 < s->rows) {
                 memcpy(s->intra_pred_data[0] + (tile_col_start * 8 * bytesperpixel),
                        f->data[0] + yoff + 63 * ls_y,
-                       8 * tiles_cols * bytesperpixel);
+                       8 * tile_cols_len * bytesperpixel);
                 memcpy(s->intra_pred_data[1] + (tile_col_start * 8 * bytesperpixel >> s->ss_h),
                        f->data[1] + uvoff + ((64 >> s->ss_v) - 1) * ls_uv,
-                       8 * tiles_cols * bytesperpixel >> s->ss_h);
+                       8 * tile_cols_len * bytesperpixel >> s->ss_h);
                 memcpy(s->intra_pred_data[2] + (tile_col_start * 8 * bytesperpixel >> s->ss_h),
                        f->data[2] + uvoff + ((64 >> s->ss_v) - 1) * ls_uv,
-                       8 * tiles_cols * bytesperpixel >> s->ss_h);
+                       8 * tile_cols_len * bytesperpixel >> s->ss_h);
             }
 
             ff_thread_report_progress2(avctx, row >> 3, 0, 1);
