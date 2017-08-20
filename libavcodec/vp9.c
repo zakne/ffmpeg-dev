@@ -1439,7 +1439,6 @@ FF_ENABLE_DEPRECATION_WARNINGS
     }
 
     // main tile decode loop
-    bytesperpixel = s->bytesperpixel;
     memset(s->above_partition_ctx, 0, s->cols);
     memset(s->above_skip_ctx, 0, s->cols);
     if (s->s.h.keyframe || s->s.h.intraonly) {
