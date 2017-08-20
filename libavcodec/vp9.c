@@ -220,7 +220,12 @@ static int update_block_buffers(AVCodecContext *avctx)
 
     if (td->b_base && td->block_base && s->block_alloc_using_2pass == s->s.frames[CUR_FRAME].uses_2pass)
         return 0;
-    
+
+    for (i = 0; i < s->s.h.tiling.tile_cols; i++) {
+        av_free(s->td[i].b_base);
+        av_free(s->td[i].block_base);
+    }
+
     chroma_blocks = 64 * 64 >> (s->ss_h + s->ss_v);
     chroma_eobs   = 16 * 16 >> (s->ss_h + s->ss_v);
     if (s->s.frames[CUR_FRAME].uses_2pass) {
@@ -1519,12 +1524,10 @@ FF_ENABLE_DEPRECATION_WARNINGS
 
         ff_alloc_entries(avctx, s->sb_rows);
 
-        if (avctx->active_thread_type == FF_THREAD_SLICE) {
-            ff_reset_entries(avctx);
+        if (avctx->active_thread_type == FF_THREAD_SLICE)
             avctx->execute3(avctx, decode_tiles_mt, loopfilter_proc, s->td, NULL, s->s.h.tiling.tile_cols);
-        } else {
+        else
             decode_tiles(avctx);
-        }
 
         if (avctx->active_thread_type == FF_THREAD_SLICE)
             for (i = 1; i < s->s.h.tiling.tile_cols; i++)
