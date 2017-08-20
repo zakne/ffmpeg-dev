@@ -1314,9 +1314,9 @@ int decode_tiles_mt(AVCodecContext *avctx, void *tdata, int jobnr,
             else
                 lflvl_ptr = lflvl_base_ptr+s->sb_cols*c;
             pthread_mutex_lock(&s->mutex);
-            while (!loopfilter_ready)
+            while (!s->loopfilter_ready)
                 pthread_cond_wait(&s->cond, &s->mutex);
-            loopfilter_ready = 0;
+            s->loopfilter_ready = 0;
             pthread_mutex_unlock(&s->mutex);
         }
     }
@@ -1352,7 +1352,7 @@ int loopfilter_proc(AVCodecContext *avctx)
                                      yoff, uvoff);
             }
         }
-        loopfilter_ready = 1;
+        s->loopfilter_ready = 1;
         pthread_cond_broadcast(&s->cond);
     }
     return 0;
@@ -1493,7 +1493,7 @@ FF_ENABLE_DEPRECATION_WARNINGS
     
     pthread_mutex_init(&s->mutex, NULL);
     pthread_cond_init(&s->cond, NULL);
-    loopfitler_ready = 0;
+    s->loopfitler_ready = 0;
 
     do {
         for (i = 0; i < s->s.h.tiling.tile_cols; i++) {
