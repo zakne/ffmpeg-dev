@@ -198,10 +198,6 @@ static int update_size(AVCodecContext *avctx, int w, int h)
     assign(s->lflvl,               VP9Filter *,            s->sb_rows);
 #undef assign
 
-    // these will be re-allocated a little later
-    //av_freep(&s->b_base);
-    //av_freep(&s->block_base);
-
     if (s->s.h.bpp != s->last_bpp) {
         ff_vp9dsp_init(&s->dsp, s->s.h.bpp, avctx->flags & AV_CODEC_FLAG_BITEXACT);
         ff_videodsp_init(&s->vdsp, s->s.h.bpp);
