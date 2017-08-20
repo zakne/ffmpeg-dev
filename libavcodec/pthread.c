@@ -69,7 +69,6 @@ static void validate_thread_parameters(AVCodecContext *avctx)
 
 int ff_thread_init(AVCodecContext *avctx)
 {
-    avctx->thread_count = 2;
     validate_thread_parameters(avctx);
 
     if (avctx->active_thread_type&FF_THREAD_SLICE)
