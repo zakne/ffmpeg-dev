@@ -176,7 +176,7 @@ static int update_size(AVCodecContext *avctx, int w, int h)
     // FIXME we slightly over-allocate here for subsampled chroma, but a little
     // bit of padding shouldn't affect performance...
     p = av_malloc(s->sb_cols * (128 + 192 * bytesperpixel +
-                                4*sizeof(*s->lflvl) + 16 * sizeof(*s->above_mv_ctx)));
+                                s->sb_rows*sizeof(*s->lflvl) + 16 * sizeof(*s->above_mv_ctx)));
     if (!p)
         return AVERROR(ENOMEM);
     assign(s->intra_pred_data[0],  uint8_t *,             64 * bytesperpixel);
@@ -195,7 +195,7 @@ static int update_size(AVCodecContext *avctx, int w, int h)
     assign(s->above_comp_ctx,      uint8_t *,              8);
     assign(s->above_ref_ctx,       uint8_t *,              8);
     assign(s->above_filter_ctx,    uint8_t *,              8);
-    assign(s->lflvl,               VP9Filter *,            4);
+    assign(s->lflvl,               VP9Filter *,            s->sb_rows);
 #undef assign
 
     // these will be re-allocated a little later
@@ -1242,23 +1242,23 @@ int decode_tiles_mt(AVCodecContext *avctx, void *tdata, int jobnr,
     VP9TileData *td = &s->td[jobnr];
     ptrdiff_t uvoff, yoff, ls_y, ls_uv;
     AVFrame *f;
-    int row, col, tile_row, c;
+    int row, col, tile_row;
     int bytesperpixel;
     int tile_row_start, tile_row_end, tile_col_start, tile_col_end;
+    VP9Filter *lflvl_ptr;
 
     f = s->s.frames[CUR_FRAME].tf.f;
     ls_y = f->linesize[0];
     ls_uv =f->linesize[1];
     bytesperpixel = s->bytesperpixel;
-    c = 1;
 
     set_tile_offset(&tile_col_start, &tile_col_end,
                     jobnr, s->s.h.tiling.log2_tile_cols, s->sb_cols);
     td->tile_col_start  = tile_col_start;
-    VP9Filter *lflvl_base_ptr = s->lflvl+(tile_col_start >> 3);
-    VP9Filter *lflvl_ptr = lflvl_base_ptr;
     uvoff = (64 * bytesperpixel >> s->ss_h)*(tile_col_start >> 3);
     yoff = (64 * bytesperpixel)*(tile_col_start >> 3);
+    lflvl_ptr = s->lflvl+(tile_col_start >> 3);
+
     for (tile_row = 0; tile_row < s->s.h.tiling.tile_rows; tile_row++) {
         set_tile_offset(&tile_row_start, &tile_row_end,
                         tile_row, s->s.h.tiling.log2_tile_rows, s->sb_rows);
@@ -1266,7 +1266,7 @@ int decode_tiles_mt(AVCodecContext *avctx, void *tdata, int jobnr,
         memcpy(&td->c, &td->c_b[tile_row], sizeof(td->c));
 
         for (row = tile_row_start; row < tile_row_end;
-             row += 8, yoff += ls_y * 64, uvoff += ls_uv * 64 >> s->ss_v, c++) {
+             row += 8, yoff += ls_y * 64, uvoff += ls_uv * 64 >> s->ss_v, lflvl_ptr += sb->cols) {
             ptrdiff_t yoff2 = yoff, uvoff2 = uvoff;
 
             memset(td->left_partition_ctx, 0, 8);
@@ -1305,14 +1305,8 @@ int decode_tiles_mt(AVCodecContext *avctx, void *tdata, int jobnr,
                        f->data[2] + uvoff + ((64 >> s->ss_v) - 1) * ls_uv,
                        8 * tiles_cols * bytesperpixel >> s->ss_h);
             }
-            av_log(avctx, AV_LOG_DEBUG, "job_nr = %d, row = %d\n", jobnr, row/8);
-            ff_thread_report_progress3(avctx, row >> 3, 0, 1);
-            if (row != 0 && c == 4) {
-                lflvl_ptr = lflvl_base_ptr;
-                c = 0;
-            }
-            else
-                lflvl_ptr = lflvl_base_ptr+s->sb_cols*c;
+
+            ff_thread_report_progress2(avctx, row >> 3, 0, 1);
         }
     }
     return 0;
@@ -1335,11 +1329,10 @@ int loopfilter_proc(AVCodecContext *avctx)
     //loopfilter one row
     for (i = 0; i < s->sb_rows; i++) {
         ff_thread_await_progress3(avctx, i, 0, s->s.h.tiling.tile_cols);
-        av_log(avctx, AV_LOG_DEBUG, "--sb_row = %d loopfilter--\n", i);
         if (s->s.h.filter.level) {
             yoff = (ls_y * 64)*i;
             uvoff =  (ls_uv * 64 >> s->ss_v)*i;
-            lflvl_ptr = s->lflvl+s->sb_cols*(i%4);
+            lflvl_ptr = s->lflvl+s->sb_cols*i;
             for (col = 0; col < s->cols;
                  col += 8, yoff += 64 * bytesperpixel,
                  uvoff += 64 * bytesperpixel >> s->ss_h, lflvl_ptr++) {
@@ -1359,7 +1352,6 @@ static int vp9_decode_frame(AVCodecContext *avctx, void *frame,
     int size = pkt->size;
     VP9Context *s = avctx->priv_data;
     int ret, tile_row, tile_col, i, j, ref;
-    int bytesperpixel;
     int retain_segmap_ref = s->s.frames[REF_FRAME_SEGMAP].segmentation_map &&
                             (!s->s.h.segmentation.enabled || !s->s.h.segmentation.update_map);
     AVFrame *f;

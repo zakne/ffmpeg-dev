@@ -193,18 +193,6 @@ void ff_thread_report_progress2(AVCodecContext *avctx, int field, int thread, in
     pthread_mutex_unlock(&p->progress_mutex[thread]);
 }
 
-void ff_thread_report_progress3(AVCodecContext *avctx, int field, int thread, int n)
-{
-    SliceThreadContext *p = avctx->internal->thread_ctx;
-    int *entries = p->entries;
-
-    pthread_mutex_lock(&p->progress_mutex[thread]);
-    entries[field] +=n;
-    pthread_cond_signal(&p->progress_cond[thread]);
-    pthread_mutex_unlock(&p->progress_mutex[thread]);
-    pthread_barrier_wait(&p->barrier);
-}
-
 void ff_thread_await_progress2(AVCodecContext *avctx, int field, int thread, int shift)
 {
     SliceThreadContext *p  = avctx->internal->thread_ctx;
@@ -225,7 +213,7 @@ void ff_thread_await_progress3(AVCodecContext *avctx, int field, int thread, int
 {
     SliceThreadContext *p  = avctx->internal->thread_ctx;
     int *entries      = p->entries;
-    
+
     pthread_mutex_lock(&p->progress_mutex[thread]);
     while ((entries[field]) != shift){
         pthread_cond_wait(&p->progress_cond[thread], &p->progress_mutex[thread]);
