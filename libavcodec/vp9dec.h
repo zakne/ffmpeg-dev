@@ -188,7 +188,6 @@ typedef struct VP9TileData {
     } counts;
 
     // whole-frame cache
-    VP9Filter *lflvl_ptr;
     DECLARE_ALIGNED(32, uint8_t, edge_emu_buffer)[135 * 144 * 2];
 
     // contextual (left) cache

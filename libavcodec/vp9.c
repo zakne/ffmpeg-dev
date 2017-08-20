@@ -176,7 +176,7 @@ static int update_size(AVCodecContext *avctx, int w, int h)
     // FIXME we slightly over-allocate here for subsampled chroma, but a little
     // bit of padding shouldn't affect performance...
     p = av_malloc(s->sb_cols * (128 + 192 * bytesperpixel +
-                                30*sizeof(*s->lflvl) + 16 * sizeof(*s->above_mv_ctx)));
+                                s->sb_rows*sizeof(*s->lflvl) + 16 * sizeof(*s->above_mv_ctx)));
     if (!p)
         return AVERROR(ENOMEM);
     assign(s->intra_pred_data[0],  uint8_t *,             64 * bytesperpixel);
@@ -195,7 +195,7 @@ static int update_size(AVCodecContext *avctx, int w, int h)
     assign(s->above_comp_ctx,      uint8_t *,              8);
     assign(s->above_ref_ctx,       uint8_t *,              8);
     assign(s->above_filter_ctx,    uint8_t *,              8);
-    assign(s->lflvl,               VP9Filter *,            30);
+    assign(s->lflvl,               VP9Filter *,            s->sb_rows);
 #undef assign
 
     // these will be re-allocated a little later
@@ -216,25 +216,26 @@ static int update_block_buffers(AVCodecContext *avctx)
     int i;
     VP9Context *s = avctx->priv_data;
     int chroma_blocks, chroma_eobs, bytesperpixel = s->bytesperpixel;
+    VP9TileData *td = s->td[0];
 
-    if (s->td[0].b_base && s->td[0].block_base && s->block_alloc_using_2pass == s->s.frames[CUR_FRAME].uses_2pass)
+    if (td->b_base && td->block_base && s->block_alloc_using_2pass == s->s.frames[CUR_FRAME].uses_2pass)
         return 0;
-
+    
     chroma_blocks = 64 * 64 >> (s->ss_h + s->ss_v);
     chroma_eobs   = 16 * 16 >> (s->ss_h + s->ss_v);
     if (s->s.frames[CUR_FRAME].uses_2pass) {
         int sbs = s->sb_cols * s->sb_rows;
 
-        s->td[0].b_base = av_malloc_array(s->cols * s->rows, sizeof(VP9Block));
-        s->td[0].block_base = av_mallocz(((64 * 64 + 2 * chroma_blocks) * bytesperpixel * sizeof(int16_t) +
+        td->b_base = av_malloc_array(s->cols * s->rows, sizeof(VP9Block));
+        td->block_base = av_mallocz(((64 * 64 + 2 * chroma_blocks) * bytesperpixel * sizeof(int16_t) +
                                     16 * 16 + 2 * chroma_eobs) * sbs);
-        if (!s->td[0].b_base || !s->td[0].block_base)
+        if (!td->b_base || !td->block_base)
             return AVERROR(ENOMEM);
-        s->td[0].uvblock_base[0] = s->td[0].block_base + sbs * 64 * 64 * bytesperpixel;
-        s->td[0].uvblock_base[1] = s->td[0].uvblock_base[0] + sbs * chroma_blocks * bytesperpixel;
-        s->td[0].eob_base = (uint8_t *) (s->td[0].uvblock_base[1] + sbs * chroma_blocks * bytesperpixel);
-        s->td[0].uveob_base[0] = s->td[0].eob_base + 16 * 16 * sbs;
-        s->td[0].uveob_base[1] = s->td[0].uveob_base[0] + chroma_eobs * sbs;
+        td->uvblock_base[0] = td->block_base + sbs * 64 * 64 * bytesperpixel;
+        td->uvblock_base[1] = td->uvblock_base[0] + sbs * chroma_blocks * bytesperpixel;
+        td->eob_base = (uint8_t *) (td->uvblock_base[1] + sbs * chroma_blocks * bytesperpixel);
+        td->uveob_base[0] = td->eob_base + 16 * 16 * sbs;
+        td->uveob_base[1] = td->uveob_base[0] + chroma_eobs * sbs;
     } else {
         for (i = 0; i < s->s.h.tiling.tile_cols; i++) {
             s->td[i].b_base = av_malloc(sizeof(VP9Block));
@@ -680,7 +681,7 @@ static int decode_frame_header(AVCodecContext *avctx,
     if (s->s.h.tiling.tile_cols != (1 << s->s.h.tiling.log2_tile_cols)) {
         s->s.h.tiling.tile_cols = 1 << s->s.h.tiling.log2_tile_cols;
 
-        s->td = av_malloc(sizeof(VP9TileData) * s->s.h.tiling.tile_cols);
+        s->td = av_malloc_array(s->s.h.tiling.tile_cols, sizeof(VP9TileData));
         if (!s->td) {
             av_log(avctx, AV_LOG_ERROR, "Ran out of memory during tile init\n");
             return AVERROR(ENOMEM);
@@ -1246,8 +1247,8 @@ int decode_tiles_mt(AVCodecContext *avctx, void *tdata, int jobnr,
     int bytesperpixel;
     unsigned tile_cols_len;
     int tile_row_start, tile_row_end, tile_col_start, tile_col_end;
-    VP9Filter *lflvl_ptr;
-
+    VP9Filter *lflvl_ptr_base;
+            
     f = s->s.frames[CUR_FRAME].tf.f;
     ls_y = f->linesize[0];
     ls_uv =f->linesize[1];
@@ -1258,17 +1259,16 @@ int decode_tiles_mt(AVCodecContext *avctx, void *tdata, int jobnr,
     td->tile_col_start  = tile_col_start;
     uvoff = (64 * bytesperpixel >> s->ss_h)*(tile_col_start >> 3);
     yoff = (64 * bytesperpixel)*(tile_col_start >> 3);
-    lflvl_ptr = s->lflvl+(tile_col_start >> 3);
-
+    lflvl_ptr_base = s->lflvl+(tile_col_start >> 3);
     for (tile_row = 0; tile_row < s->s.h.tiling.tile_rows; tile_row++) {
         set_tile_offset(&tile_row_start, &tile_row_end,
                         tile_row, s->s.h.tiling.log2_tile_rows, s->sb_rows);
 
         memcpy(&td->c, &td->c_b[tile_row], sizeof(td->c));
-
         for (row = tile_row_start; row < tile_row_end;
-             row += 8, yoff += ls_y * 64, uvoff += ls_uv * 64 >> s->ss_v, lflvl_ptr += s->sb_cols) {
+             row += 8, yoff += ls_y * 64, uvoff += ls_uv * 64 >> s->ss_v) {
             ptrdiff_t yoff2 = yoff, uvoff2 = uvoff;
+            VP9Filter *lflvl_ptr = lflvl_ptr_base+s->sb_cols*(row >> 3);
 
             memset(td->left_partition_ctx, 0, 8);
             memset(td->left_skip_ctx, 0, 8);
