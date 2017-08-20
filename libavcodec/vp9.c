@@ -216,7 +216,7 @@ static int update_block_buffers(AVCodecContext *avctx)
     int i;
     VP9Context *s = avctx->priv_data;
     int chroma_blocks, chroma_eobs, bytesperpixel = s->bytesperpixel;
-    VP9TileData *td = s->td[0];
+    VP9TileData *td = &s->td[0];
 
     if (td->b_base && td->block_base && s->block_alloc_using_2pass == s->s.frames[CUR_FRAME].uses_2pass)
         return 0;
