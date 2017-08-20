@@ -97,6 +97,10 @@ typedef struct VP9Context {
     GetBitContext gb;
     VP56RangeCoder c;
     int pass;
+    
+    pthread_mutex_t mutex;
+    pthread_cond_t cond;
+    int loopfitler_ready;
 
     uint8_t ss_h, ss_v;
     uint8_t last_bpp, bpp_index, bytesperpixel;

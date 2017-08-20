@@ -1255,10 +1255,10 @@ int decode_tiles_mt(AVCodecContext *avctx, void *tdata, int jobnr,
     set_tile_offset(&tile_col_start, &tile_col_end,
                     jobnr, s->s.h.tiling.log2_tile_cols, s->sb_cols);
     td->tile_col_start  = tile_col_start;
-    VP9Filter *lflvl_base_ptr = s->lflvl+tile_col_start/8;
+    VP9Filter *lflvl_base_ptr = s->lflvl+(tile_col_start >> 3);
     VP9Filter *lflvl_ptr = lflvl_base_ptr;
-    uvoff = (64 * bytesperpixel >> s->ss_h)*tile_col_start/8;
-    yoff = (64 * bytesperpixel)*tile_col_start/8;
+    uvoff = (64 * bytesperpixel >> s->ss_h)*(tile_col_start >> 3);
+    yoff = (64 * bytesperpixel)*(tile_col_start >> 3);
     for (tile_row = 0; tile_row < s->s.h.tiling.tile_rows; tile_row++) {
         set_tile_offset(&tile_row_start, &tile_row_end,
                         tile_row, s->s.h.tiling.log2_tile_rows, s->sb_rows);
@@ -1306,13 +1306,18 @@ int decode_tiles_mt(AVCodecContext *avctx, void *tdata, int jobnr,
                        8 * tiles_cols * bytesperpixel >> s->ss_h);
             }
             av_log(avctx, AV_LOG_DEBUG, "job_nr = %d, row = %d\n", jobnr, row/8);
-            ff_thread_report_progress3(avctx, row/8, 0, 1);
+            ff_thread_report_progress3(avctx, row >> 3, 0, 1);
             if (row != 0 && c == 4) {
                 lflvl_ptr = lflvl_base_ptr;
                 c = 0;
             }
             else
                 lflvl_ptr = lflvl_base_ptr+s->sb_cols*c;
+            pthread_mutex_lock(&s->mutex);
+            while (!loopfilter_ready)
+                pthread_cond_wait(&s->cond, &s->mutex);
+            loopfilter_ready = 0;
+            pthread_mutex_unlock(&s->mutex);
         }
     }
     return 0;
@@ -1343,10 +1348,12 @@ int loopfilter_proc(AVCodecContext *avctx)
             for (col = 0; col < s->cols;
                  col += 8, yoff += 64 * bytesperpixel,
                  uvoff += 64 * bytesperpixel >> s->ss_h, lflvl_ptr++) {
-                ff_vp9_loopfilter_sb(avctx, lflvl_ptr, i*8, col,
+                ff_vp9_loopfilter_sb(avctx, lflvl_ptr, i << 3, col,
                                      yoff, uvoff);
             }
         }
+        loopfilter_ready = 1;
+        pthread_cond_broadcast(&s->cond);
     }
     return 0;
 }
@@ -1483,6 +1490,10 @@ FF_ENABLE_DEPRECATION_WARNINGS
     } else if (!s->s.h.refreshctx) {
         ff_thread_finish_setup(avctx);
     }
+    
+    pthread_mutex_init(&s->mutex, NULL);
+    pthread_cond_init(&s->cond, NULL);
+    loopfitler_ready = 0;
 
     do {
         for (i = 0; i < s->s.h.tiling.tile_cols; i++) {
@@ -1561,6 +1572,9 @@ finish:
             return ret;
         *got_frame = 1;
     }
+
+pthread_cond_destroy(&s->cond);
+pthread_mutex_destroy(&s->mutex);
 
     return pkt->size;
 }
