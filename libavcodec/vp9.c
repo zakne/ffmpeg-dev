@@ -1493,7 +1493,7 @@ FF_ENABLE_DEPRECATION_WARNINGS
     
     pthread_mutex_init(&s->mutex, NULL);
     pthread_cond_init(&s->cond, NULL);
-    s->loopfitler_ready = 0;
+    s->loopfilter_ready = 0;
 
     do {
         for (i = 0; i < s->s.h.tiling.tile_cols; i++) {

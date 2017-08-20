@@ -100,7 +100,7 @@ typedef struct VP9Context {
     
     pthread_mutex_t mutex;
     pthread_cond_t cond;
-    int loopfitler_ready;
+    int loopfilter_ready;
 
     uint8_t ss_h, ss_v;
     uint8_t last_bpp, bpp_index, bytesperpixel;
