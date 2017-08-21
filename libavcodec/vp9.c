@@ -1329,7 +1329,7 @@ int loopfilter_proc(AVCodecContext *avctx)
         if (s->s.h.filter.level) {
             yoff = (ls_y * 64)*i;
             uvoff =  (ls_uv * 64 >> s->ss_v)*i;
-            lflvl_ptr = s->lflvl+s->sb_cols*(i%4);
+            lflvl_ptr = s->lflvl+s->sb_cols*i;
             for (col = 0; col < s->cols;
                  col += 8, yoff += 64 * bytesperpixel,
                  uvoff += 64 * bytesperpixel >> s->ss_h, lflvl_ptr++) {
