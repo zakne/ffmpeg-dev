@@ -1547,8 +1547,11 @@ finish:
         *got_frame = 1;
     }
 
-    for (i = 0; i < s->s.h.tiling.tile_cols; i++)
+    for (i = 0; i < s->s.h.tiling.tile_cols; i++) {
         av_free(s->td[i].c_b);
+        av_free(s->td[i].b_base);
+        av_free(s->td[i].block_base);
+    }
     av_free(s->td);
 
     return pkt->size;
