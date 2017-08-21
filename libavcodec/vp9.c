@@ -1519,9 +1519,11 @@ FF_ENABLE_DEPRECATION_WARNINGS
         }
 
         ff_alloc_entries(avctx, s->sb_rows);
-
-        if (avctx->active_thread_type == FF_THREAD_SLICE)
+        
+        if (avctx->active_thread_type == FF_THREAD_SLICE) {
+            ff_reset_entries(avctx);
             avctx->execute3(avctx, decode_tiles_mt, loopfilter_proc, s->td, NULL, s->s.h.tiling.tile_cols);
+        }
         else
             decode_tiles(avctx);
 
@@ -1552,8 +1554,6 @@ finish:
             return ret;
         *got_frame = 1;
     }
-
-    ff_slice_thread_free(avctx);
 
     return pkt->size;
 }
