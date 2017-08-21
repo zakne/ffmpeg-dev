@@ -1100,10 +1100,6 @@ static void free_buffers(VP9Context *s)
     int i;
 
     av_freep(&s->intra_pred_data[0]);
-    for (i = 0; i < s->s.h.tiling.tile_cols; i++) {
-        av_freep(&s->td[i].b_base);
-        av_freep(&s->td[i].block_base);
-    }
 }
 
 static av_cold int vp9_decode_free(AVCodecContext *avctx)
