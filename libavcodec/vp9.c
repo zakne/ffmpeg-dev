@@ -1303,7 +1303,7 @@ int decode_tiles_mt(AVCodecContext *avctx, void *tdata, int jobnr,
                        8 * tile_cols_len * bytesperpixel >> s->ss_h);
             }
 
-            ff_thread_report_progress3(avctx, row >> 3, 0, 1);
+            ff_thread_report_progress2(avctx, row >> 3, 0, 1);
         }
     }
     return 0;
