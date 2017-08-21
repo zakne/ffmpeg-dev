@@ -215,7 +215,7 @@ void ff_thread_report_progress3(AVCodecContext *avctx, int field, int thread, in
     int *entries = p->entries;
 
     pthread_mutex_lock(&p->progress_mutex[thread]);
-    av_log(avctx, AV_LOG_DEBUG, "entries[field] = %d, row =%d\n", entries[field]);
+    av_log(avctx, AV_LOG_DEBUG, "entries[field] = %d, field = %d\n", entries[field],field);
     entries[field] +=n;
     pthread_cond_signal(&p->progress_cond[thread]);
     pthread_mutex_unlock(&p->progress_mutex[thread]);
