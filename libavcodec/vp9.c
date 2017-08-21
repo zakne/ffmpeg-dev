@@ -682,11 +682,10 @@ static int decode_frame_header(AVCodecContext *avctx,
     if (s->s.h.tiling.tile_cols != (1 << s->s.h.tiling.log2_tile_cols)) {
         s->s.h.tiling.tile_cols = 1 << s->s.h.tiling.log2_tile_cols;
 
-        s->td = av_malloc_array(s->s.h.tiling.tile_cols, sizeof(VP9TileData));
         if (s->td)
             av_free(s->td);
-        else
-            return AVERROR(ENOMEM);
+
+        s->td = av_malloc_array(s->s.h.tiling.tile_cols, sizeof(VP9TileData));
 
         for (i = 0; i < s->s.h.tiling.tile_cols; i++)
             s->td[i].s = s;
