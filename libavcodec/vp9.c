@@ -1532,10 +1532,6 @@ FF_ENABLE_DEPRECATION_WARNINGS
     ff_thread_report_progress(&s->s.frames[CUR_FRAME].tf, INT_MAX, 0);
 
 finish:
-    for (i = 0; i < s->s.h.tiling.tile_cols; i++)
-        av_free(s->td[i].c_b);
-    av_free(s->td);
-
     // ref frame setup
     for (i = 0; i < 8; i++) {
         if (s->s.refs[i].f->buf[0])
@@ -1550,6 +1546,10 @@ finish:
             return ret;
         *got_frame = 1;
     }
+
+    for (i = 0; i < s->s.h.tiling.tile_cols; i++)
+        av_free(s->td[i].c_b);
+    av_free(s->td);
 
     return pkt->size;
 }
