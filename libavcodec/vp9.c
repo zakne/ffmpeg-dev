@@ -1553,6 +1553,8 @@ finish:
         *got_frame = 1;
     }
 
+    ff_slice_thread_free(avctx);
+
     return pkt->size;
 }
 
