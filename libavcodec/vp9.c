@@ -118,6 +118,7 @@ static int update_size(AVCodecContext *avctx, int w, int h)
     VP9Context *s = avctx->priv_data;
     uint8_t *p;
     int bytesperpixel = s->bytesperpixel, ret, cols, rows;
+    int lflvl_len;
 
     av_assert0(w > 0 && h > 0);
 
@@ -170,13 +171,14 @@ static int update_size(AVCodecContext *avctx, int w, int h)
     s->sb_rows   = (h + 63) >> 6;
     s->cols      = (w + 7) >> 3;
     s->rows      = (h + 7) >> 3;
+    lflvl_len    = avctx->active_thread_type == FF_THREAD_SLICE ? s->sb_rows : 1;
 
 #define assign(var, type, n) var = (type) p; p += s->sb_cols * (n) * sizeof(*var)
     av_freep(&s->intra_pred_data[0]);
     // FIXME we slightly over-allocate here for subsampled chroma, but a little
     // bit of padding shouldn't affect performance...
     p = av_malloc(s->sb_cols * (128 + 192 * bytesperpixel +
-                                4*sizeof(*s->lflvl) + 16 * sizeof(*s->above_mv_ctx)));
+                                lflvl_len*sizeof(*s->lflvl) + 16 * sizeof(*s->above_mv_ctx)));
     if (!p)
         return AVERROR(ENOMEM);
     assign(s->intra_pred_data[0],  uint8_t *,             64 * bytesperpixel);
@@ -195,7 +197,7 @@ static int update_size(AVCodecContext *avctx, int w, int h)
     assign(s->above_comp_ctx,      uint8_t *,              8);
     assign(s->above_ref_ctx,       uint8_t *,              8);
     assign(s->above_filter_ctx,    uint8_t *,              8);
-    assign(s->lflvl,               VP9Filter *,            4);
+    assign(s->lflvl,               VP9Filter *,            lflvl_len);
 #undef assign
 
     if (s->s.h.bpp != s->last_bpp) {
@@ -1236,7 +1238,7 @@ int decode_tiles_mt(AVCodecContext *avctx, void *tdata, int jobnr,
     VP9TileData *td = &s->td[jobnr];
     ptrdiff_t uvoff, yoff, ls_y, ls_uv;
     AVFrame *f;
-    int row, col, tile_row, c;
+    int row, col, tile_row;
     int bytesperpixel;
     unsigned tile_cols_len;
     int tile_row_start, tile_row_end, tile_col_start, tile_col_end;
@@ -1254,15 +1256,15 @@ int decode_tiles_mt(AVCodecContext *avctx, void *tdata, int jobnr,
     uvoff = (64 * bytesperpixel >> s->ss_h)*(tile_col_start >> 3);
     yoff = (64 * bytesperpixel)*(tile_col_start >> 3);
     lflvl_ptr_base = s->lflvl+(tile_col_start >> 3);
-    VP9Filter *lflvl_ptr = lflvl_ptr_base;
     for (tile_row = 0; tile_row < s->s.h.tiling.tile_rows; tile_row++) {
         set_tile_offset(&tile_row_start, &tile_row_end,
                         tile_row, s->s.h.tiling.log2_tile_rows, s->sb_rows);
 
         memcpy(&td->c, &td->c_b[tile_row], sizeof(td->c));
         for (row = tile_row_start; row < tile_row_end;
-             row += 8, yoff += ls_y * 64, uvoff += ls_uv * 64 >> s->ss_v, c++) {
+             row += 8, yoff += ls_y * 64, uvoff += ls_uv * 64 >> s->ss_v) {
             ptrdiff_t yoff2 = yoff, uvoff2 = uvoff;
+            VP9Filter *lflvl_ptr = lflvl_ptr_base+s->sb_cols*(row >> 3);
 
             memset(td->left_partition_ctx, 0, 8);
             memset(td->left_skip_ctx, 0, 8);
@@ -1300,13 +1302,8 @@ int decode_tiles_mt(AVCodecContext *avctx, void *tdata, int jobnr,
                        f->data[2] + uvoff + ((64 >> s->ss_v) - 1) * ls_uv,
                        8 * tile_cols_len * bytesperpixel >> s->ss_h);
             }
+
             ff_thread_report_progress3(avctx, row >> 3, 0, 1);
-            if (row != 0 && c == 4) {
-                lflvl_ptr = lflvl_ptr_base;
-                c = 0;
-            }
-            else
-                lflvl_ptr = lflvl_ptr_base+s->sb_cols*c;
         }
     }
     return 0;
@@ -1329,7 +1326,7 @@ int loopfilter_proc(AVCodecContext *avctx)
     //loopfilter one row
     for (i = 0; i < s->sb_rows; i++) {
         ff_thread_await_progress3(avctx, i, 0, s->s.h.tiling.tile_cols);
-        av_log(avctx, AV_LOG_DEBUG, "--loopfilter, row =%d--\n", i);
+
         if (s->s.h.filter.level) {
             yoff = (ls_y * 64)*i;
             uvoff =  (ls_uv * 64 >> s->ss_v)*i;
