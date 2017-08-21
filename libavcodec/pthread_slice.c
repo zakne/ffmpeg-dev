@@ -85,9 +85,9 @@ void ff_slice_thread_free(AVCodecContext *avctx)
     for (i = 0; i < c->thread_count; i++) {
         pthread_mutex_destroy(&c->progress_mutex[i]);
         pthread_cond_destroy(&c->progress_cond[i]);
-        pthread_barrier_destroy(&c->barrier);
     }
-
+    pthread_barrier_destroy(&c->barrier);
+    
     av_freep(&c->entries);
     av_freep(&c->progress_mutex);
     av_freep(&c->progress_cond);
