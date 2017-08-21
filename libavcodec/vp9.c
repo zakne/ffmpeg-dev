@@ -1300,7 +1300,6 @@ int decode_tiles_mt(AVCodecContext *avctx, void *tdata, int jobnr,
                        f->data[2] + uvoff + ((64 >> s->ss_v) - 1) * ls_uv,
                        8 * tile_cols_len * bytesperpixel >> s->ss_h);
             }
-            av_log(avctx, AV_LOG_DEBUG, "jobnr = %d, row =%d\n", jobnr, row>>3);
             ff_thread_report_progress3(avctx, row >> 3, 0, 1);
             if (row != 0 && c == 4) {
                 lflvl_ptr = lflvl_ptr_base;
@@ -1519,7 +1518,7 @@ FF_ENABLE_DEPRECATION_WARNINGS
         }
 
         ff_alloc_entries(avctx, s->sb_rows);
-        
+
         if (avctx->active_thread_type == FF_THREAD_SLICE) {
             ff_reset_entries(avctx);
             avctx->execute3(avctx, decode_tiles_mt, loopfilter_proc, s->td, NULL, s->s.h.tiling.tile_cols);
