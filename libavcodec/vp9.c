@@ -1244,7 +1244,6 @@ int decode_tiles_mt(AVCodecContext *avctx, void *tdata, int jobnr,
     int tile_row_start, tile_row_end, tile_col_start, tile_col_end;
     VP9Filter *lflvl_ptr_base;
 
-    c = 1;        
     f = s->s.frames[CUR_FRAME].tf.f;
     ls_y = f->linesize[0];
     ls_uv =f->linesize[1];
