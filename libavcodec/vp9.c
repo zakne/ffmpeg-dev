@@ -241,7 +241,7 @@ static int update_block_buffers(AVCodecContext *avctx)
         td->uveob_base[1] = td->uveob_base[0] + chroma_eobs * sbs;
     } else {
         for (i = 0; i < s->s.h.tiling.tile_cols; i++) {
-            s->td[i].b_base = av_mallocz(sizeof(VP9Block));
+            s->td[i].b_base = av_malloc(sizeof(VP9Block));
             s->td[i].block_base = av_mallocz((64 * 64 + 2 * chroma_blocks) * bytesperpixel * sizeof(int16_t) +
                                        16 * 16 + 2 * chroma_eobs);
             if (!s->td[i].b_base || !s->td[i].block_base)
@@ -691,6 +691,11 @@ static int decode_frame_header(AVCodecContext *avctx,
 
         for (i = 0; i < s->s.h.tiling.tile_cols; i++)
             s->td[i].s = s;
+
+        for (i = 0; i < s->s.h.tiling.tile_cols; i++) {
+            av_freep(&s->td[i].b_base);
+            av_freep(&s->td[i].block_base);
+        }
     }
 
     /* check reference frames */
