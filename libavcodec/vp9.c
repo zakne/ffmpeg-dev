@@ -218,12 +218,9 @@ static int update_block_buffers(AVCodecContext *avctx)
 
     if (td->b_base && td->block_base && s->block_alloc_using_2pass == s->s.frames[CUR_FRAME].uses_2pass)
         return 0;
-
-    for (i = 0; i < s->s.h.tiling.tile_cols; i++) {
-        av_free(s->td[i].b_base);
-        av_free(s->td[i].block_base);
-    }
-
+     
+    av_free(td->b_base);
+    av_free(td->block_base);
     chroma_blocks = 64 * 64 >> (s->ss_h + s->ss_v);
     chroma_eobs   = 16 * 16 >> (s->ss_h + s->ss_v);
     if (s->s.frames[CUR_FRAME].uses_2pass) {
@@ -240,9 +237,16 @@ static int update_block_buffers(AVCodecContext *avctx)
         td->uveob_base[0] = td->eob_base + 16 * 16 * sbs;
         td->uveob_base[1] = td->uveob_base[0] + chroma_eobs * sbs;
     } else {
+        for (i = 1; i < s->s.h.tiling.tile_cols; i++) {
+            if (s->td[i].b_base && s->td[i].block_base) {
+                av_free(s->td[i].b_base);
+                av_free(s->td[i].b_block_base);
+            }
+        }
+
         for (i = 0; i < s->s.h.tiling.tile_cols; i++) {
             s->td[i].b_base = av_malloc(sizeof(VP9Block));
-            s->td[i].block_base = av_malloc((64 * 64 + 2 * chroma_blocks) * bytesperpixel * sizeof(int16_t) +
+            s->td[i].block_base = av_mallocz((64 * 64 + 2 * chroma_blocks) * bytesperpixel * sizeof(int16_t) +
                                        16 * 16 + 2 * chroma_eobs);
             if (!s->td[i].b_base || !s->td[i].block_base)
                 return AVERROR(ENOMEM);
