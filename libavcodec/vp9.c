@@ -691,7 +691,7 @@ static int decode_frame_header(AVCodecContext *avctx,
         if (s->td)
             av_free(s->td);
 
-        s->td = av_malloc_array(s->s.h.tiling.tile_cols, sizeof(VP9TileData));
+        s->td = av_mallocz_array(s->s.h.tiling.tile_cols, sizeof(VP9TileData));
 
         for (i = 0; i < s->s.h.tiling.tile_cols; i++)
             s->td[i].s = s;
