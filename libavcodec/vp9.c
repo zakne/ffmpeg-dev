@@ -237,13 +237,13 @@ static int update_block_buffers(AVCodecContext *avctx)
         td->uveob_base[0] = td->eob_base + 16 * 16 * sbs;
         td->uveob_base[1] = td->uveob_base[0] + chroma_eobs * sbs;
     } else {
+        av_log(avctx, AV_LOG_DEBUG, "-----allocating block buffer------\n");
         for (i = 1; i < s->s.h.tiling.tile_cols; i++) {
             if (s->td[i].b_base && s->td[i].block_base) {
                 av_free(s->td[i].b_base);
                 av_free(s->td[i].block_base);
             }
         }
-
         for (i = 0; i < s->s.h.tiling.tile_cols; i++) {
             s->td[i].b_base = av_malloc(sizeof(VP9Block));
             s->td[i].block_base = av_mallocz((64 * 64 + 2 * chroma_blocks) * bytesperpixel * sizeof(int16_t) +
