@@ -684,18 +684,17 @@ static int decode_frame_header(AVCodecContext *avctx,
     if (s->s.h.tiling.tile_cols != (1 << s->s.h.tiling.log2_tile_cols)) {
         s->s.h.tiling.tile_cols = 1 << s->s.h.tiling.log2_tile_cols;
 
-        if (s->td)
+        if (s->td) {
+            for (i = 0; i < s->s.h.tiling.tile_cols; i++) {
+                av_freep(&s->td[i].b_base);
+                av_freep(&s->td[i].block_base);
+            }
             av_free(s->td);
-
+        }
         s->td = av_malloc_array(s->s.h.tiling.tile_cols, sizeof(VP9TileData));
 
         for (i = 0; i < s->s.h.tiling.tile_cols; i++)
             s->td[i].s = s;
-
-        for (i = 0; i < s->s.h.tiling.tile_cols; i++) {
-            av_freep(&s->td[i].b_base);
-            av_freep(&s->td[i].block_base);
-        }
     }
 
     /* check reference frames */
