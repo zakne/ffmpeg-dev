@@ -242,7 +242,7 @@ static int update_block_buffers(AVCodecContext *avctx)
     } else {
         for (i = 0; i < s->s.h.tiling.tile_cols; i++) {
             s->td[i].b_base = av_malloc(sizeof(VP9Block));
-            s->td[i].block_base = av_mallocz((64 * 64 + 2 * chroma_blocks) * bytesperpixel * sizeof(int16_t) +
+            s->td[i].block_base = av_malloc((64 * 64 + 2 * chroma_blocks) * bytesperpixel * sizeof(int16_t) +
                                        16 * 16 + 2 * chroma_eobs);
             if (!s->td[i].b_base || !s->td[i].block_base)
                 return AVERROR(ENOMEM);
@@ -684,13 +684,9 @@ static int decode_frame_header(AVCodecContext *avctx,
     if (s->s.h.tiling.tile_cols != (1 << s->s.h.tiling.log2_tile_cols)) {
         s->s.h.tiling.tile_cols = 1 << s->s.h.tiling.log2_tile_cols;
 
-        if (s->td) {
-            for (i = 0; i < s->s.h.tiling.tile_cols; i++) {
-                av_freep(&s->td[i].b_base);
-                av_freep(&s->td[i].block_base);
-            }
+        if (s->td)
             av_free(s->td);
-        }
+
         s->td = av_malloc_array(s->s.h.tiling.tile_cols, sizeof(VP9TileData));
 
         for (i = 0; i < s->s.h.tiling.tile_cols; i++)
