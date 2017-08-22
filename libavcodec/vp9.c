@@ -240,7 +240,7 @@ static int update_block_buffers(AVCodecContext *avctx)
         for (i = 1; i < s->s.h.tiling.tile_cols; i++) {
             if (s->td[i].b_base && s->td[i].block_base) {
                 av_free(s->td[i].b_base);
-                av_free(s->td[i].b_block_base);
+                av_free(s->td[i].block_base);
             }
         }
 
