@@ -1119,6 +1119,7 @@ static av_cold int vp9_decode_free(AVCodecContext *avctx)
             ff_thread_release_buffer(avctx, &s->next_refs[i]);
         av_frame_free(&s->next_refs[i].f);
     }
+
     free_buffers(s);
     av_freep(&s->td);
     return 0;
@@ -1133,12 +1134,12 @@ static int decode_tiles(AVCodecContext *avctx)
     int tile_row_start, tile_row_end, tile_col_start, tile_col_end;
     AVFrame *f;
     ptrdiff_t yoff, uvoff, ls_y, ls_uv;
-    
+
     f = s->s.frames[CUR_FRAME].tf.f;
     ls_y = f->linesize[0];
     ls_uv =f->linesize[1];
     bytesperpixel = s->bytesperpixel;
-    
+
     yoff = uvoff = 0;
     for (tile_row = 0; tile_row < s->s.h.tiling.tile_rows; tile_row++) {
         set_tile_offset(&tile_row_start, &tile_row_end,
@@ -1237,17 +1238,15 @@ int decode_tiles_mt(AVCodecContext *avctx, void *tdata, int jobnr,
     VP9Context *s = avctx->priv_data;
     VP9TileData *td = &s->td[jobnr];
     ptrdiff_t uvoff, yoff, ls_y, ls_uv;
-    AVFrame *f;
-    int row, col, tile_row;
-    int bytesperpixel;
+    int bytesperpixel = s->bytesperpixel, row, col, tile_row;
     unsigned tile_cols_len;
     int tile_row_start, tile_row_end, tile_col_start, tile_col_end;
     VP9Filter *lflvl_ptr_base;
+    AVFrame *f;
 
     f = s->s.frames[CUR_FRAME].tf.f;
     ls_y = f->linesize[0];
     ls_uv =f->linesize[1];
-    bytesperpixel = s->bytesperpixel;
 
     set_tile_offset(&tile_col_start, &tile_col_end,
                     jobnr, s->s.h.tiling.log2_tile_cols, s->sb_cols);
@@ -1255,6 +1254,7 @@ int decode_tiles_mt(AVCodecContext *avctx, void *tdata, int jobnr,
     uvoff = (64 * bytesperpixel >> s->ss_h)*(tile_col_start >> 3);
     yoff = (64 * bytesperpixel)*(tile_col_start >> 3);
     lflvl_ptr_base = s->lflvl+(tile_col_start >> 3);
+
     for (tile_row = 0; tile_row < s->s.h.tiling.tile_rows; tile_row++) {
         set_tile_offset(&tile_row_start, &tile_row_end,
                         tile_row, s->s.h.tiling.log2_tile_rows, s->sb_rows);
@@ -1314,15 +1314,13 @@ int loopfilter_proc(AVCodecContext *avctx)
     VP9Context *s = avctx->priv_data;
     ptrdiff_t uvoff, yoff, ls_y, ls_uv;
     VP9Filter *lflvl_ptr;
-    int bytesperpixel, col, i;
+    int bytesperpixel = s->bytesperpixel, col, i;
     AVFrame *f;
 
-    bytesperpixel = s->bytesperpixel;
     f = s->s.frames[CUR_FRAME].tf.f;
     ls_y = f->linesize[0];
     ls_uv =f->linesize[1];
 
-    //loopfilter one row
     for (i = 0; i < s->sb_rows; i++) {
         ff_thread_await_progress3(avctx, i, 0, s->s.h.tiling.tile_cols);
 
@@ -1472,6 +1470,8 @@ FF_ENABLE_DEPRECATION_WARNINGS
         ff_thread_finish_setup(avctx);
     }
 
+    ff_alloc_entries(avctx, s->sb_rows);
+
     do {
         for (i = 0; i < s->s.h.tiling.tile_cols; i++) {
             s->td[i].b = s->td[i].b_base;
@@ -1513,12 +1513,8 @@ FF_ENABLE_DEPRECATION_WARNINGS
             }
         }
 
-        ff_alloc_entries(avctx, s->sb_rows);
-
-        if (avctx->active_thread_type == FF_THREAD_SLICE) {
-            ff_reset_entries(avctx);
+        if (avctx->active_thread_type == FF_THREAD_SLICE)
             avctx->execute3(avctx, decode_tiles_mt, loopfilter_proc, s->td, NULL, s->s.h.tiling.tile_cols);
-        }
         else
             decode_tiles(avctx);
 
