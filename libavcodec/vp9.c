@@ -218,7 +218,7 @@ static int update_block_buffers(AVCodecContext *avctx)
 
     if (td->b_base && td->block_base && s->block_alloc_using_2pass == s->s.frames[CUR_FRAME].uses_2pass)
         return 0;
-     
+
     av_free(td->b_base);
     av_free(td->block_base);
     chroma_blocks = 64 * 64 >> (s->ss_h + s->ss_v);
@@ -237,7 +237,6 @@ static int update_block_buffers(AVCodecContext *avctx)
         td->uveob_base[0] = td->eob_base + 16 * 16 * sbs;
         td->uveob_base[1] = td->uveob_base[0] + chroma_eobs * sbs;
     } else {
-        av_log(avctx, AV_LOG_DEBUG, "-----allocating block buffer------\n");
         for (i = 1; i < s->s.h.tiling.tile_cols; i++) {
             if (s->td[i].b_base && s->td[i].block_base) {
                 av_free(s->td[i].b_base);
