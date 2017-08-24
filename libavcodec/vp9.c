@@ -201,7 +201,7 @@ static int update_size(AVCodecContext *avctx, int w, int h)
 #undef assign
 
     if (s->td) {
-        for (i = 0; i < s->s.h.tiling.tile_cols; i++) {
+        for (i = 0; i < s->l; i++) {
             av_freep(&s->td[i].b_base);
             av_freep(&s->td[i].block_base);
         }
@@ -244,15 +244,13 @@ static int update_block_buffers(AVCodecContext *avctx)
         td->uveob_base[0] = td->eob_base + 16 * 16 * sbs;
         td->uveob_base[1] = td->uveob_base[0] + chroma_eobs * sbs;
     } else {
-        int l = avctx->active_thread_type == FF_THREAD_SLICE ? s->s.h.tiling.tile_cols : 1;
-
-        for (i = 1; i < l; i++) {
+        for (i = 1; i < s->l; i++) {
             if (s->td[i].b_base && s->td[i].block_base) {
                 av_free(s->td[i].b_base);
                 av_free(s->td[i].block_base);
             }
         }
-        for (i = 0; i < l; i++) {
+        for (i = 0; i < s->l; i++) {
             s->td[i].b_base = av_malloc(sizeof(VP9Block));
             s->td[i].block_base = av_mallocz((64 * 64 + 2 * chroma_blocks) * bytesperpixel * sizeof(int16_t) +
                                        16 * 16 + 2 * chroma_eobs);
@@ -695,7 +693,7 @@ static int decode_frame_header(AVCodecContext *avctx,
     s->s.h.tiling.tile_rows = 1 << s->s.h.tiling.log2_tile_rows;
     if (s->s.h.tiling.tile_cols != (1 << s->s.h.tiling.log2_tile_cols)) {
         if (s->td) {
-            for (i = 0; i < s->s.h.tiling.tile_cols; i++) {
+            for (i = 0; i < s->l; i++) {
                 av_free(s->td[i].b_base);
                 av_free(s->td[i].block_base);
             }
@@ -703,7 +701,7 @@ static int decode_frame_header(AVCodecContext *avctx,
         }
 
         s->s.h.tiling.tile_cols = 1 << s->s.h.tiling.log2_tile_cols;
-
+        s->l = avctx->active_thread_type == FF_THREAD_SLICE ? s->s.h.tiling.log2_tile_cols : 1;
         s->td = av_mallocz_array(s->s.h.tiling.tile_cols, sizeof(VP9TileData));
         if (!s->td)
             return AVERROR(ENOMEM);
@@ -1114,7 +1112,7 @@ static void free_buffers(VP9Context *s)
     int i;
 
     av_freep(&s->intra_pred_data[0]);
-    for (i = 0; i < s->s.h.tiling.tile_cols; i++) {
+    for (i = 0; i < s->l; i++) {
         av_freep(&s->td[i].b_base);
         av_freep(&s->td[i].block_base);
     }
@@ -1363,7 +1361,7 @@ static int vp9_decode_frame(AVCodecContext *avctx, void *frame,
     const uint8_t *data = pkt->data;
     int size = pkt->size;
     VP9Context *s = avctx->priv_data;
-    int ret, tile_row, tile_col, i, j, ref;
+    int ret, tile_row, tile_col, i, j, ref, l;
     int retain_segmap_ref = s->s.frames[REF_FRAME_SEGMAP].segmentation_map &&
                             (!s->s.h.segmentation.enabled || !s->s.h.segmentation.update_map);
     AVFrame *f;
@@ -1490,7 +1488,7 @@ FF_ENABLE_DEPRECATION_WARNINGS
     ff_alloc_entries(avctx, s->sb_rows);
 
     do {
-        for (i = 0; i < s->s.h.tiling.tile_cols; i++) {
+        for (i = 0; i < s->l; i++) {
             s->td[i].b = s->td[i].b_base;
             s->td[i].block = s->td[i].block_base;
             s->td[i].uvblock[0] = s->td[i].uvblock_base[0];
