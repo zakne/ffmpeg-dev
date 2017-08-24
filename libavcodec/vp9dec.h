@@ -150,7 +150,7 @@ typedef struct VP9Context {
 typedef struct VP9TileData {
     VP9Context *s;
     VP56RangeCoder c_b[4];
-    VP56RangeCoder c;
+    VP56RangeCoder *c;
     int row, row7, col, col7;
     uint8_t *dst[3];
     ptrdiff_t y_stride, uv_stride;

@@ -236,8 +236,8 @@ static void find_ref_mvs(VP9TileData *td,
 static av_always_inline int read_mv_component(VP9TileData *td, int idx, int hp)
 {
     VP9Context *s = td->s;
-    int bit, sign = vp56_rac_get_prob(&td->c, s->prob.p.mv_comp[idx].sign);
-    int n, c = vp8_rac_get_tree(&td->c, ff_vp9_mv_class_tree,
+    int bit, sign = vp56_rac_get_prob(td->c, s->prob.p.mv_comp[idx].sign);
+    int n, c = vp8_rac_get_tree(td->c, ff_vp9_mv_class_tree,
                                 s->prob.p.mv_comp[idx].classes);
 
     td->counts.mv_comp[idx].sign[sign]++;
@@ -246,17 +246,17 @@ static av_always_inline int read_mv_component(VP9TileData *td, int idx, int hp)
         int m;
 
         for (n = 0, m = 0; m < c; m++) {
-            bit = vp56_rac_get_prob(&td->c, s->prob.p.mv_comp[idx].bits[m]);
+            bit = vp56_rac_get_prob(td->c, s->prob.p.mv_comp[idx].bits[m]);
             n |= bit << m;
             td->counts.mv_comp[idx].bits[m][bit]++;
         }
         n <<= 3;
-        bit = vp8_rac_get_tree(&td->c, ff_vp9_mv_fp_tree,
+        bit = vp8_rac_get_tree(td->c, ff_vp9_mv_fp_tree,
                                s->prob.p.mv_comp[idx].fp);
         n  |= bit << 1;
         td->counts.mv_comp[idx].fp[bit]++;
         if (hp) {
-            bit = vp56_rac_get_prob(&td->c, s->prob.p.mv_comp[idx].hp);
+            bit = vp56_rac_get_prob(td->c, s->prob.p.mv_comp[idx].hp);
             td->counts.mv_comp[idx].hp[bit]++;
             n |= bit;
         } else {
@@ -267,14 +267,14 @@ static av_always_inline int read_mv_component(VP9TileData *td, int idx, int hp)
         }
         n += 8 << c;
     } else {
-        n = vp56_rac_get_prob(&td->c, s->prob.p.mv_comp[idx].class0);
+        n = vp56_rac_get_prob(td->c, s->prob.p.mv_comp[idx].class0);
         td->counts.mv_comp[idx].class0[n]++;
-        bit = vp8_rac_get_tree(&td->c, ff_vp9_mv_fp_tree,
+        bit = vp8_rac_get_tree(td->c, ff_vp9_mv_fp_tree,
                                s->prob.p.mv_comp[idx].class0_fp[n]);
         td->counts.mv_comp[idx].class0_fp[n][bit]++;
         n = (n << 3) | (bit << 1);
         if (hp) {
-            bit = vp56_rac_get_prob(&td->c, s->prob.p.mv_comp[idx].class0_hp);
+            bit = vp56_rac_get_prob(td->c, s->prob.p.mv_comp[idx].class0_hp);
             td->counts.mv_comp[idx].class0_hp[bit]++;
             n |= bit;
         } else {
@@ -319,7 +319,7 @@ void ff_vp9_fill_mv(VP9TileData *td, VP56mv *mv, int mode, int sb)
             }
         }
         if (mode == NEWMV) {
-            enum MVJoint j = vp8_rac_get_tree(&td->c, ff_vp9_mv_joint_tree,
+            enum MVJoint j = vp8_rac_get_tree(td->c, ff_vp9_mv_joint_tree,
                                               s->prob.p.mv_joint);
 
             td->counts.mv_joint[j]++;
@@ -350,7 +350,7 @@ void ff_vp9_fill_mv(VP9TileData *td, VP56mv *mv, int mode, int sb)
                 }
             }
             if (mode == NEWMV) {
-                enum MVJoint j = vp8_rac_get_tree(&td->c, ff_vp9_mv_joint_tree,
+                enum MVJoint j = vp8_rac_get_tree(td->c, ff_vp9_mv_joint_tree,
                                                   s->prob.p.mv_joint);
 
                 td->counts.mv_joint[j]++;
