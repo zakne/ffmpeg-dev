@@ -1533,6 +1533,7 @@ FF_ENABLE_DEPRECATION_WARNINGS
         else
             decode_tiles(avctx);
 
+        // Sum all counts fields into td[0] for tile threading
         if (avctx->active_thread_type == FF_THREAD_SLICE)
             for (i = 1; i < s->s.h.tiling.tile_cols; i++)
                 for (j = 0; j < sizeof(s->td[i].counts) / sizeof(unsigned); j++)
