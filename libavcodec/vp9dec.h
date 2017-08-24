@@ -26,6 +26,7 @@
 
 #include <stddef.h>
 #include <stdint.h>
+#include <stdatomic.h>
 
 #include "libavutil/buffer.h"
 #include "libavutil/thread.h"
@@ -95,7 +96,11 @@ typedef struct VP9Context {
     VideoDSPContext vdsp;
     GetBitContext gb;
     VP56RangeCoder c;
-    int pass;
+    int pass, l;
+
+    pthread_mutex_t progress_mutex;
+    pthread_cond_t progress_cond;
+    atomic_int *entries;
 
     uint8_t ss_h, ss_v;
     uint8_t last_bpp, bpp_index, bytesperpixel;
@@ -150,7 +155,7 @@ typedef struct VP9Context {
 typedef struct VP9TileData {
     VP9Context *s;
     VP56RangeCoder c_b[4];
-    VP56RangeCoder c;
+    VP56RangeCoder *c;
     int row, row7, col, col7;
     uint8_t *dst[3];
     ptrdiff_t y_stride, uv_stride;
@@ -227,5 +232,10 @@ void ff_vp9_intra_recon_16bpp(VP9TileData *td,
                               ptrdiff_t y_off, ptrdiff_t uv_off);
 void ff_vp9_inter_recon_8bpp(VP9TileData *td);
 void ff_vp9_inter_recon_16bpp(VP9TileData *td);
+
+void vp9_free_entries(VP9Context *s);
+int vp9_alloc_entries(AVCodecContext *avctx, int n);
+void vp9_report_tile_progress(VP9Context *s, int field, int n);
+void vp9_await_tile_progress(VP9Context *s, int field, int n);
 
 #endif /* AVCODEC_VP9DEC_H */

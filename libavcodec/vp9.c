@@ -111,6 +111,51 @@ fail:
     return AVERROR(ENOMEM);
 }
 
+void vp9_free_entries(VP9Context *s) {
+    pthread_mutex_destroy(&s->progress_mutex);
+    pthread_cond_destroy(&s->progress_cond);
+    av_freep(&s->entries);
+}
+
+int vp9_alloc_entries(AVCodecContext *avctx, int n) {
+    VP9Context *s = avctx->priv_data;
+    int i;
+
+    if (avctx->active_thread_type & FF_THREAD_SLICE)  {
+        if (s->entries)
+            av_freep(&s->entries);
+
+        s->entries = av_malloc_array(n, sizeof(atomic_int));
+
+        if (!s->entries) {
+            av_freep(&s->entries);
+            return AVERROR(ENOMEM);
+        }
+
+        for (i  = 0; i < n; i++)
+            atomic_init(&s->entries[i], 0);
+
+        pthread_mutex_init(&s->progress_mutex, NULL);
+        pthread_cond_init(&s->progress_cond, NULL);
+    }
+    return 0;
+}
+
+void vp9_report_tile_progress(VP9Context *s, int field, int n) {
+    atomic_fetch_add_explicit(&s->entries[field], n, memory_order_relaxed);
+    pthread_cond_signal(&s->progress_cond);
+}
+
+void vp9_await_tile_progress(VP9Context *s, int field, int n) {
+    if (atomic_load_explicit(&s->entries[field], memory_order_acquire) >= n)
+        return;
+
+    pthread_mutex_lock(&s->progress_mutex);
+    while (atomic_load_explicit(&s->entries[field], memory_order_relaxed) != n)
+        pthread_cond_wait(&s->progress_cond, &s->progress_mutex);
+    pthread_mutex_unlock(&s->progress_mutex);
+}
+
 static int update_size(AVCodecContext *avctx, int w, int h)
 {
 #define HWACCEL_MAX (CONFIG_VP9_DXVA2_HWACCEL + CONFIG_VP9_D3D11VA_HWACCEL * 2 + CONFIG_VP9_VAAPI_HWACCEL)
@@ -118,7 +163,7 @@ static int update_size(AVCodecContext *avctx, int w, int h)
     VP9Context *s = avctx->priv_data;
     uint8_t *p;
     int bytesperpixel = s->bytesperpixel, ret, cols, rows;
-    int lflvl_len;
+    int lflvl_len, i;
 
     av_assert0(w > 0 && h > 0);
 
@@ -178,7 +223,7 @@ static int update_size(AVCodecContext *avctx, int w, int h)
     // FIXME we slightly over-allocate here for subsampled chroma, but a little
     // bit of padding shouldn't affect performance...
     p = av_malloc(s->sb_cols * (128 + 192 * bytesperpixel +
-                                lflvl_len*sizeof(*s->lflvl) + 16 * sizeof(*s->above_mv_ctx)));
+                                lflvl_len * sizeof(*s->lflvl) + 16 * sizeof(*s->above_mv_ctx)));
     if (!p)
         return AVERROR(ENOMEM);
     assign(s->intra_pred_data[0],  uint8_t *,             64 * bytesperpixel);
@@ -199,6 +244,13 @@ static int update_size(AVCodecContext *avctx, int w, int h)
     assign(s->above_filter_ctx,    uint8_t *,              8);
     assign(s->lflvl,               VP9Filter *,            lflvl_len);
 #undef assign
+
+    if (s->td) {
+        for (i = 0; i < s->l; i++) {
+            av_freep(&s->td[i].b_base);
+            av_freep(&s->td[i].block_base);
+        }
+    }
 
     if (s->s.h.bpp != s->last_bpp) {
         ff_vp9dsp_init(&s->dsp, s->s.h.bpp, avctx->flags & AV_CODEC_FLAG_BITEXACT);
@@ -237,13 +289,13 @@ static int update_block_buffers(AVCodecContext *avctx)
         td->uveob_base[0] = td->eob_base + 16 * 16 * sbs;
         td->uveob_base[1] = td->uveob_base[0] + chroma_eobs * sbs;
     } else {
-        for (i = 1; i < s->s.h.tiling.tile_cols; i++) {
+        for (i = 1; i < s->l; i++) {
             if (s->td[i].b_base && s->td[i].block_base) {
                 av_free(s->td[i].b_base);
                 av_free(s->td[i].block_base);
             }
         }
-        for (i = 0; i < s->s.h.tiling.tile_cols; i++) {
+        for (i = 0; i < s->l; i++) {
             s->td[i].b_base = av_malloc(sizeof(VP9Block));
             s->td[i].block_base = av_mallocz((64 * 64 + 2 * chroma_blocks) * bytesperpixel * sizeof(int16_t) +
                                        16 * 16 + 2 * chroma_eobs);
@@ -685,11 +737,16 @@ static int decode_frame_header(AVCodecContext *avctx,
     s->s.h.tiling.log2_tile_rows = decode012(&s->gb);
     s->s.h.tiling.tile_rows = 1 << s->s.h.tiling.log2_tile_rows;
     if (s->s.h.tiling.tile_cols != (1 << s->s.h.tiling.log2_tile_cols)) {
-        s->s.h.tiling.tile_cols = 1 << s->s.h.tiling.log2_tile_cols;
-
-        if (s->td)
+        if (s->td) {
+            for (i = 0; i < s->l; i++) {
+                av_free(s->td[i].b_base);
+                av_free(s->td[i].block_base);
+            }
             av_free(s->td);
+        }
 
+        s->s.h.tiling.tile_cols = 1 << s->s.h.tiling.log2_tile_cols;
+        s->l = avctx->active_thread_type == FF_THREAD_SLICE ? s->s.h.tiling.tile_cols : 1;
         s->td = av_mallocz_array(s->s.h.tiling.tile_cols, sizeof(VP9TileData));
         if (!s->td)
             return AVERROR(ENOMEM);
@@ -974,11 +1031,11 @@ static void decode_sb(VP9TileData *td, int row, int col, VP9Filter *lflvl,
     int bytesperpixel = s->bytesperpixel;
 
     if (bl == BL_8X8) {
-        bp = vp8_rac_get_tree(&td->c, ff_vp9_partition_tree, p);
+        bp = vp8_rac_get_tree(td->c, ff_vp9_partition_tree, p);
         ff_vp9_decode_block(td, row, col, lflvl, yoff, uvoff, bl, bp);
     } else if (col + hbs < s->cols) { // FIXME why not <=?
         if (row + hbs < s->rows) { // FIXME why not <=?
-            bp = vp8_rac_get_tree(&td->c, ff_vp9_partition_tree, p);
+            bp = vp8_rac_get_tree(td->c, ff_vp9_partition_tree, p);
             switch (bp) {
             case PARTITION_NONE:
                 ff_vp9_decode_block(td, row, col, lflvl, yoff, uvoff, bl, bp);
@@ -1010,7 +1067,7 @@ static void decode_sb(VP9TileData *td, int row, int col, VP9Filter *lflvl,
             default:
                 av_assert0(0);
             }
-        } else if (vp56_rac_get_prob_branchy(&td->c, p[1])) {
+        } else if (vp56_rac_get_prob_branchy(td->c, p[1])) {
             bp = PARTITION_SPLIT;
             decode_sb(td, row, col, lflvl, yoff, uvoff, bl + 1);
             decode_sb(td, row, col + hbs, lflvl,
@@ -1021,7 +1078,7 @@ static void decode_sb(VP9TileData *td, int row, int col, VP9Filter *lflvl,
             ff_vp9_decode_block(td, row, col, lflvl, yoff, uvoff, bl, bp);
         }
     } else if (row + hbs < s->rows) { // FIXME why not <=?
-        if (vp56_rac_get_prob_branchy(&td->c, p[2])) {
+        if (vp56_rac_get_prob_branchy(td->c, p[2])) {
             bp = PARTITION_SPLIT;
             decode_sb(td, row, col, lflvl, yoff, uvoff, bl + 1);
             yoff  += hbs * 8 * y_stride;
@@ -1100,7 +1157,7 @@ static void free_buffers(VP9Context *s)
     int i;
 
     av_freep(&s->intra_pred_data[0]);
-    for (i = 0; i < s->s.h.tiling.tile_cols; i++) {
+    for (i = 0; i < s->l; i++) {
         av_freep(&s->td[i].b_base);
         av_freep(&s->td[i].block_base);
     }
@@ -1126,6 +1183,7 @@ static av_cold int vp9_decode_free(AVCodecContext *avctx)
     }
 
     free_buffers(s);
+    vp9_free_entries(s);
     av_freep(&s->td);
     return 0;
 }
@@ -1171,7 +1229,7 @@ static int decode_tiles(AVCodecContext *avctx)
                     memset(td->left_uv_nnz_ctx, 0, 32);
                     memset(td->left_segpred_ctx, 0, 8);
 
-                    memcpy(&td->c, &s->td[tile_col].c_b[tile_row], sizeof(td->c));
+                    td->c = &s->td[tile_col].c_b[tile_row];
                 }
 
                 for (col = tile_col_start;
@@ -1192,8 +1250,6 @@ static int decode_tiles(AVCodecContext *avctx)
                                   yoff2, uvoff2, BL_64X64);
                     }
                 }
-                if (s->pass != 2)
-                    memcpy(&s->td[tile_col].c_b[tile_row], &td->c, sizeof(td->c));
             }
 
             if (s->pass == 1)
@@ -1264,7 +1320,7 @@ int decode_tiles_mt(AVCodecContext *avctx, void *tdata, int jobnr,
         set_tile_offset(&tile_row_start, &tile_row_end,
                         tile_row, s->s.h.tiling.log2_tile_rows, s->sb_rows);
 
-        memcpy(&td->c, &td->c_b[tile_row], sizeof(td->c));
+        td->c = &td->c_b[tile_row];
         for (row = tile_row_start; row < tile_row_end;
              row += 8, yoff += ls_y * 64, uvoff += ls_uv * 64 >> s->ss_v) {
             ptrdiff_t yoff2 = yoff, uvoff2 = uvoff;
@@ -1307,7 +1363,7 @@ int decode_tiles_mt(AVCodecContext *avctx, void *tdata, int jobnr,
                        8 * tile_cols_len * bytesperpixel >> s->ss_h);
             }
 
-            ff_thread_report_progress2(avctx, row >> 3, 0, 1);
+            vp9_report_tile_progress(s, row >> 3, 1);
         }
     }
     return 0;
@@ -1327,7 +1383,7 @@ int loopfilter_proc(AVCodecContext *avctx)
     ls_uv =f->linesize[1];
 
     for (i = 0; i < s->sb_rows; i++) {
-        ff_thread_await_progress3(avctx, i, 0, s->s.h.tiling.tile_cols);
+        vp9_await_tile_progress(s, i, s->s.h.tiling.tile_cols);
 
         if (s->s.h.filter.level) {
             yoff = (ls_y * 64)*i;
@@ -1475,10 +1531,10 @@ FF_ENABLE_DEPRECATION_WARNINGS
         ff_thread_finish_setup(avctx);
     }
 
-    ff_alloc_entries(avctx, s->sb_rows);
+    vp9_alloc_entries(avctx, s->sb_rows);
 
     do {
-        for (i = 0; i < s->s.h.tiling.tile_cols; i++) {
+        for (i = 0; i < s->l; i++) {
             s->td[i].b = s->td[i].b_base;
             s->td[i].block = s->td[i].block_base;
             s->td[i].uvblock[0] = s->td[i].uvblock_base[0];
@@ -1523,6 +1579,7 @@ FF_ENABLE_DEPRECATION_WARNINGS
         else
             decode_tiles(avctx);
 
+        // Sum all counts fields into td[0].counts for tile threading
         if (avctx->active_thread_type == FF_THREAD_SLICE)
             for (i = 1; i < s->s.h.tiling.tile_cols; i++)
                 for (j = 0; j < sizeof(s->td[i].counts) / sizeof(unsigned); j++)
