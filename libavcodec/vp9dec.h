@@ -148,7 +148,7 @@ typedef struct VP9Context {
 } VP9Context;
 
 typedef struct VP9TileData {
-    const VP9Context *s;
+    VP9Context * const s;
     VP56RangeCoder c_b[4];
     VP56RangeCoder *c;
     int row, row7, col, col7;
