@@ -701,7 +701,7 @@ static int decode_frame_header(AVCodecContext *avctx,
         }
 
         s->s.h.tiling.tile_cols = 1 << s->s.h.tiling.log2_tile_cols;
-        s->l = avctx->active_thread_type == FF_THREAD_SLICE ? s->s.h.tiling.log2_tile_cols : 1;
+        s->l = avctx->active_thread_type == FF_THREAD_SLICE ? s->s.h.tiling.tile_cols : 1;
         s->td = av_mallocz_array(s->s.h.tiling.tile_cols, sizeof(VP9TileData));
         if (!s->td)
             return AVERROR(ENOMEM);
@@ -1361,7 +1361,7 @@ static int vp9_decode_frame(AVCodecContext *avctx, void *frame,
     const uint8_t *data = pkt->data;
     int size = pkt->size;
     VP9Context *s = avctx->priv_data;
-    int ret, tile_row, tile_col, i, j, ref, l;
+    int ret, tile_row, tile_col, i, j, ref;
     int retain_segmap_ref = s->s.frames[REF_FRAME_SEGMAP].segmentation_map &&
                             (!s->s.h.segmentation.enabled || !s->s.h.segmentation.update_map);
     AVFrame *f;
