@@ -118,7 +118,7 @@ static int update_size(AVCodecContext *avctx, int w, int h)
     VP9Context *s = avctx->priv_data;
     uint8_t *p;
     int bytesperpixel = s->bytesperpixel, ret, cols, rows;
-    int lflvl_len;
+    int lflvl_len, i;
 
     av_assert0(w > 0 && h > 0);
 
@@ -1276,7 +1276,7 @@ int decode_tiles_mt(AVCodecContext *avctx, void *tdata, int jobnr,
         set_tile_offset(&tile_row_start, &tile_row_end,
                         tile_row, s->s.h.tiling.log2_tile_rows, s->sb_rows);
 
-        td->c = td->c_b[tile_row];
+        td->c = &td->c_b[tile_row];
         for (row = tile_row_start; row < tile_row_end;
              row += 8, yoff += ls_y * 64, uvoff += ls_uv * 64 >> s->ss_v) {
             ptrdiff_t yoff2 = yoff, uvoff2 = uvoff;
