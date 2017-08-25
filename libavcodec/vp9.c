@@ -888,7 +888,7 @@ static int decode_frame_header(AVCodecContext *avctx,
                             if (m > 3 && l == 0) // dc only has 3 pt
                                 break;
                             memcpy(p, r, 3);
-                            p[3] = 0;
+                            memcpy(&p[3], ff_vp9_model_pareto8[p[2]], 8);
                         }
         }
         if (s->s.h.txfmmode == i)
@@ -1019,7 +1019,7 @@ static int decode_frame_header(AVCodecContext *avctx,
 static void decode_sb(VP9TileData *td, int row, int col, VP9Filter *lflvl,
                       ptrdiff_t yoff, ptrdiff_t uvoff, enum BlockLevel bl)
 {
-    VP9Context *s = td->s;
+    const VP9Context *s = td->s;
     int c = ((s->above_partition_ctx[col] >> (3 - bl)) & 1) |
             (((td->left_partition_ctx[row & 0x7] >> (3 - bl)) & 1) << 1);
     const uint8_t *p = s->s.h.keyframe || s->s.h.intraonly ? ff_vp9_default_kf_partition_probs[bl][c] :
@@ -1098,7 +1098,7 @@ static void decode_sb(VP9TileData *td, int row, int col, VP9Filter *lflvl,
 static void decode_sb_mem(VP9TileData *td, int row, int col, VP9Filter *lflvl,
                           ptrdiff_t yoff, ptrdiff_t uvoff, enum BlockLevel bl)
 {
-    VP9Context *s = td->s;
+    const VP9Context *s = td->s;
     VP9Block *b = td->b;
     ptrdiff_t hbs = 4 >> bl;
     AVFrame *f = s->s.frames[CUR_FRAME].tf.f;

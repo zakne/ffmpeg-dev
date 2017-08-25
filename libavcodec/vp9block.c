@@ -839,10 +839,6 @@ skip_eob:
             val       = 1;
             cache[rc] = 1;
         } else {
-            // fill in p[3-10] (model fill) - only once per frame for each pos
-            if (!tp[3])
-                memcpy(&tp[3], ff_vp9_model_pareto8[tp[2]], 8);
-
             cnt[band][nnz][2]++;
             if (!vp56_rac_get_prob_branchy(c, tp[3])) { // 2, 3, 4
                 if (!vp56_rac_get_prob_branchy(c, tp[4])) {
