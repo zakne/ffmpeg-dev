@@ -809,7 +809,7 @@ decode_coeffs_b_generic(VP56RangeCoder *c, int16_t *coef, int n_coeffs,
                         const int16_t *band_counts, const int16_t *qmul)
 {
     int i = 0, band = 0, band_left = band_counts[band];
-    uint8_t *tp = p[0][nnz];
+    const uint8_t *tp = p[0][nnz];
     uint8_t cache[1024];
 
     do {
