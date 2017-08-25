@@ -89,7 +89,7 @@ static void decode_mode(VP9TileData *td)
         TX_32X32, TX_32X32, TX_32X32, TX_32X32, TX_16X16, TX_16X16,
         TX_16X16, TX_8X8,   TX_8X8,   TX_8X8,   TX_4X4,   TX_4X4,  TX_4X4
     };
-    VP9Context *s = td->s;
+    const VP9Context *s = td->s;
     VP9Block *b = td->b;
     int row = td->row, col = td->col, row7 = td->row7;
     enum TxfmMode max_tx = max_tx_for_bl_bp[b->bs];
@@ -967,7 +967,7 @@ static int decode_coeffs_b32_16bpp(VP9TileData *td, int16_t *coef, int n_coeffs,
 
 static av_always_inline int decode_coeffs(VP9TileData *td, int is8bitsperpixel)
 {
-    VP9Context *s = td->s;
+    const VP9Context *s = td->s;
     VP9Block *b = td->b;
     int row = td->row, col = td->col;
     uint8_t (*p)[6][11] = s->prob.coef[b->tx][0 /* y */][!b->intra];
@@ -1268,7 +1268,7 @@ void ff_vp9_decode_block(VP9TileData *td, int row, int col,
                          VP9Filter *lflvl, ptrdiff_t yoff, ptrdiff_t uvoff,
                          enum BlockLevel bl, enum BlockPartition bp)
 {
-    VP9Context *s = td->s;
+    const VP9Context *s = td->s;
     VP9Block *b = td->b;
     enum BlockSize bs = bl * 3 + bp;
     int bytesperpixel = s->bytesperpixel;
