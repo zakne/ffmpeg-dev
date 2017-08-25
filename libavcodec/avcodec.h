@@ -1089,6 +1089,10 @@ typedef struct RcOverride{
  */
 #define AV_CODEC_CAP_AVOID_PROBING       (1 << 17)
 /**
+ * Codec initializes slice-based threading with a main function
+ */
+#define AV_CODEC_SLICE_THREAD_HAS_MF     (1 << 18)
+/**
  * Codec is intra only.
  */
 #define AV_CODEC_CAP_INTRA_ONLY       0x40000000
