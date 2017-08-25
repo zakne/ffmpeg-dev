@@ -927,7 +927,7 @@ skip_eob:
 
 static int decode_coeffs_b_8bpp(VP9TileData *td, int16_t *coef, int n_coeffs,
                                 unsigned (*cnt)[6][3], unsigned (*eob)[6][2],
-                                uint8_t (*p)[6][11], int nnz, const int16_t *scan,
+                                const uint8_t (*p)[6][11], int nnz, const int16_t *scan,
                                 const int16_t (*nb)[2], const int16_t *band_counts,
                                 const int16_t *qmul)
 {
@@ -937,7 +937,7 @@ static int decode_coeffs_b_8bpp(VP9TileData *td, int16_t *coef, int n_coeffs,
 
 static int decode_coeffs_b32_8bpp(VP9TileData *td, int16_t *coef, int n_coeffs,
                                   unsigned (*cnt)[6][3], unsigned (*eob)[6][2],
-                                  uint8_t (*p)[6][11], int nnz, const int16_t *scan,
+                                  const uint8_t (*p)[6][11], int nnz, const int16_t *scan,
                                   const int16_t (*nb)[2], const int16_t *band_counts,
                                   const int16_t *qmul)
 {
@@ -947,7 +947,7 @@ static int decode_coeffs_b32_8bpp(VP9TileData *td, int16_t *coef, int n_coeffs,
 
 static int decode_coeffs_b_16bpp(VP9TileData *td, int16_t *coef, int n_coeffs,
                                  unsigned (*cnt)[6][3], unsigned (*eob)[6][2],
-                                 uint8_t (*p)[6][11], int nnz, const int16_t *scan,
+                                 const uint8_t (*p)[6][11], int nnz, const int16_t *scan,
                                  const int16_t (*nb)[2], const int16_t *band_counts,
                                  const int16_t *qmul)
 {
@@ -957,7 +957,7 @@ static int decode_coeffs_b_16bpp(VP9TileData *td, int16_t *coef, int n_coeffs,
 
 static int decode_coeffs_b32_16bpp(VP9TileData *td, int16_t *coef, int n_coeffs,
                                    unsigned (*cnt)[6][3], unsigned (*eob)[6][2],
-                                   uint8_t (*p)[6][11], int nnz, const int16_t *scan,
+                                   const uint8_t (*p)[6][11], int nnz, const int16_t *scan,
                                    const int16_t (*nb)[2], const int16_t *band_counts,
                                    const int16_t *qmul)
 {
