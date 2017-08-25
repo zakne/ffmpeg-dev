@@ -1138,8 +1138,53 @@ static av_cold int vp9_decode_free(AVCodecContext *avctx)
     }
 
     free_buffers(s);
+    vp9_free_entries(s);
     av_freep(&s->td);
     return 0;
+}
+
+void vp9_free_entries((VP9Context *s) {
+    pthread_mutex_destroy(&s->progress_mutex);
+    pthread_cond_destroy(&s->progress_cond);
+    av_freep(&s->entries);
+}
+
+int vp9_alloc_entries(VP9Context *s, int n) {
+    int i;
+
+    if (avctx->active_thread_type & FF_THREAD_SLICE)  {
+        if (s->entries)
+            av_freep(&s->entries);
+
+        s->entries = av_malloc_array(n, sizeof(atomic_int));
+
+        if (!s->entries) {
+            av_freep(&p->entries);
+            return AVERROR(ENOMEM);
+        }
+
+        for (i  = 0; i < n; i++)
+            atomic_init(s->entries[i], 0);
+
+        pthread_mutex_init(&s->progress_mutex, NULL);
+        pthread_cond_init(&s->progress_cond, NULL);
+    }
+    return 0;
+}
+
+void vp9_report_tile_progress(VP9Context *s, int field, int n) {
+    atomic_fetch_add(&s->entries[field], n, memory_order_relaxed);
+    pthread_cond_signal(&s->progress_cond);
+}
+
+void vp9_await_tile_progress(VP9Context *s, int field, int n) {
+    if (atomic_load_explicit(&s->entries[field], memory_order_acquire) >= n)
+        return;
+
+    pthread_mutex_lock(&s->progress_mutex);
+    while (atomic_load_explicit(&s->entries[field], memory_order_relaxed) != n)
+        pthread_cond_wait(&s->progress_cond, &s->progress_mutex);
+    pthread_mutex_unlock(&s->progress_mutex);
 }
 
 static int decode_tiles(AVCodecContext *avctx)
@@ -1317,7 +1362,7 @@ int decode_tiles_mt(AVCodecContext *avctx, void *tdata, int jobnr,
                        8 * tile_cols_len * bytesperpixel >> s->ss_h);
             }
 
-            ff_thread_report_progress2(avctx, row >> 3, 0, 1);
+            vp9_report_tile_progress(s, row >> 3, 1);
         }
     }
     return 0;
@@ -1337,7 +1382,7 @@ int loopfilter_proc(AVCodecContext *avctx)
     ls_uv =f->linesize[1];
 
     for (i = 0; i < s->sb_rows; i++) {
-        ff_thread_await_progress3(avctx, i, 0, s->s.h.tiling.tile_cols);
+        vp9_await_tile_progress(s, i, s->s.h.tiling.tile_cols);
 
         if (s->s.h.filter.level) {
             yoff = (ls_y * 64)*i;
@@ -1485,7 +1530,7 @@ FF_ENABLE_DEPRECATION_WARNINGS
         ff_thread_finish_setup(avctx);
     }
 
-    ff_alloc_entries(avctx, s->sb_rows);
+    vp9_alloc_entries(s, n);
 
     do {
         for (i = 0; i < s->l; i++) {
@@ -1533,7 +1578,7 @@ FF_ENABLE_DEPRECATION_WARNINGS
         else
             decode_tiles(avctx);
 
-        // Sum all counts fields into td[0] for tile threading
+        // Sum all counts fields into td[0].counts for tile threading
         if (avctx->active_thread_type == FF_THREAD_SLICE)
             for (i = 1; i < s->s.h.tiling.tile_cols; i++)
                 for (j = 0; j < sizeof(s->td[i].counts) / sizeof(unsigned); j++)

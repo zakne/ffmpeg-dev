@@ -26,6 +26,7 @@
 
 #include <stddef.h>
 #include <stdint.h>
+#include <stdatomic.h>
 
 #include "libavutil/buffer.h"
 #include "libavutil/thread.h"
@@ -97,6 +98,10 @@ typedef struct VP9Context {
     VP56RangeCoder c;
     int pass, l;
 
+    pthread_mutex_t progress_mutex;
+    pthread_cond_t progress_cond;
+    atomic_int *entries;
+
     uint8_t ss_h, ss_v;
     uint8_t last_bpp, bpp_index, bytesperpixel;
     uint8_t last_keyframe;
@@ -148,7 +153,7 @@ typedef struct VP9Context {
 } VP9Context;
 
 typedef struct VP9TileData {
-    VP9Context * const s;
+    VP9Context *s;
     VP56RangeCoder c_b[4];
     VP56RangeCoder *c;
     int row, row7, col, col7;
