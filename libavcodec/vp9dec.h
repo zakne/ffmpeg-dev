@@ -233,4 +233,9 @@ void ff_vp9_intra_recon_16bpp(VP9TileData *td,
 void ff_vp9_inter_recon_8bpp(VP9TileData *td);
 void ff_vp9_inter_recon_16bpp(VP9TileData *td);
 
+void vp9_free_entries(VP9Context *s);
+int vp9_alloc_entries(AVCodecContext *avctx, int n);
+void vp9_report_tile_progress(VP9Context *s, int field, int n);
+void vp9_await_tile_progress(VP9Context *s, int field, int n);
+
 #endif /* AVCODEC_VP9DEC_H */
