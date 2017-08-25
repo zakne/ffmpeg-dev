@@ -970,14 +970,14 @@ static av_always_inline int decode_coeffs(VP9TileData *td, int is8bitsperpixel)
     const VP9Context *s = td->s;
     VP9Block *b = td->b;
     int row = td->row, col = td->col;
-    uint8_t (*p)[6][11] = s->prob.coef[b->tx][0 /* y */][!b->intra];
+    const uint8_t (*p)[6][11] = s->prob.coef[b->tx][0 /* y */][!b->intra];
     unsigned (*c)[6][3] = td->counts.coef[b->tx][0 /* y */][!b->intra];
     unsigned (*e)[6][2] = td->counts.eob[b->tx][0 /* y */][!b->intra];
     int w4 = ff_vp9_bwh_tab[1][b->bs][0] << 1, h4 = ff_vp9_bwh_tab[1][b->bs][1] << 1;
     int end_x = FFMIN(2 * (s->cols - col), w4);
     int end_y = FFMIN(2 * (s->rows - row), h4);
     int n, pl, x, y, ret;
-    int16_t (*qmul)[2] = s->s.h.segmentation.feat[b->seg_id].qmul;
+    const int16_t (*qmul)[2] = s->s.h.segmentation.feat[b->seg_id].qmul;
     int tx = 4 * s->s.h.lossless + b->tx;
     const int16_t * const *yscans = ff_vp9_scans[tx];
     const int16_t (* const *ynbs)[2] = ff_vp9_scans_nb[tx];

@@ -295,7 +295,7 @@ void ff_vp9_intra_recon_16bpp(VP9TileData *td, ptrdiff_t y_off, ptrdiff_t uv_off
     intra_recon(td, y_off, uv_off, 2);
 }
 
-static av_always_inline void mc_luma_unscaled(VP9TileData *td, vp9_mc_func (*mc)[2],
+static av_always_inline void mc_luma_unscaled(VP9TileData *td, const vp9_mc_func (*mc)[2],
                                               uint8_t *dst, ptrdiff_t dst_stride,
                                               const uint8_t *ref, ptrdiff_t ref_stride,
                                               ThreadFrame *ref_frame,
@@ -331,7 +331,7 @@ static av_always_inline void mc_luma_unscaled(VP9TileData *td, vp9_mc_func (*mc)
     mc[!!mx][!!my](dst, dst_stride, ref, ref_stride, bh, mx << 1, my << 1);
 }
 
-static av_always_inline void mc_chroma_unscaled(VP9TileData *td, vp9_mc_func (*mc)[2],
+static av_always_inline void mc_chroma_unscaled(VP9TileData *td, const vp9_mc_func (*mc)[2],
                                                 uint8_t *dst_u, uint8_t *dst_v,
                                                 ptrdiff_t dst_stride,
                                                 const uint8_t *ref_u, ptrdiff_t src_stride_u,
@@ -404,7 +404,7 @@ static av_always_inline void mc_chroma_unscaled(VP9TileData *td, vp9_mc_func (*m
 #undef SCALED
 
 static av_always_inline void mc_luma_scaled(VP9TileData *td, vp9_scaled_mc_func smc,
-                                            vp9_mc_func (*mc)[2],
+                                            const vp9_mc_func (*mc)[2],
                                             uint8_t *dst, ptrdiff_t dst_stride,
                                             const uint8_t *ref, ptrdiff_t ref_stride,
                                             ThreadFrame *ref_frame,
@@ -462,7 +462,7 @@ static av_always_inline void mc_luma_scaled(VP9TileData *td, vp9_scaled_mc_func 
 }
 
 static av_always_inline void mc_chroma_scaled(VP9TileData *td, vp9_scaled_mc_func smc,
-                                              vp9_mc_func (*mc)[2],
+                                              const vp9_mc_func (*mc)[2],
                                               uint8_t *dst_u, uint8_t *dst_v,
                                               ptrdiff_t dst_stride,
                                               const uint8_t *ref_u, ptrdiff_t src_stride_u,
