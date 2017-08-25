@@ -1124,7 +1124,8 @@ void vp9_free_entries(VP9Context *s) {
     av_freep(&s->entries);
 }
 
-int vp9_alloc_entries(VP9Context *s, int n) {
+int vp9_alloc_entries(AVCodecContext *avctx, int n) {
+    VP9Context *s = avctx->priv_data;
     int i;
 
     if (avctx->active_thread_type & FF_THREAD_SLICE)  {
@@ -1134,12 +1135,12 @@ int vp9_alloc_entries(VP9Context *s, int n) {
         s->entries = av_malloc_array(n, sizeof(atomic_int));
 
         if (!s->entries) {
-            av_freep(&p->entries);
+            av_freep(&s->entries);
             return AVERROR(ENOMEM);
         }
 
         for (i  = 0; i < n; i++)
-            atomic_init(s->entries[i], 0);
+            atomic_init(&s->entries[i], 0);
 
         pthread_mutex_init(&s->progress_mutex, NULL);
         pthread_cond_init(&s->progress_cond, NULL);
@@ -1148,7 +1149,7 @@ int vp9_alloc_entries(VP9Context *s, int n) {
 }
 
 void vp9_report_tile_progress(VP9Context *s, int field, int n) {
-    atomic_fetch_add(&s->entries[field], n, memory_order_relaxed);
+    atomic_fetch_add_explicit(&s->entries[field], n, memory_order_relaxed);
     pthread_cond_signal(&s->progress_cond);
 }
 
@@ -1530,7 +1531,7 @@ FF_ENABLE_DEPRECATION_WARNINGS
         ff_thread_finish_setup(avctx);
     }
 
-    vp9_alloc_entries(s, n);
+    vp9_alloc_entries(avctx, s->sb_rows);
 
     do {
         for (i = 0; i < s->l; i++) {
