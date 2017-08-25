@@ -876,7 +876,7 @@ static int decode_frame_header(AVCodecContext *avctx,
                                 else
                                     p[n] = r[n];
                             }
-                            p[3] = 0;
+                            memcpy(&p[3], ff_vp9_model_pareto8[p[2]], 8);
                         }
         } else {
             for (j = 0; j < 2; j++)
