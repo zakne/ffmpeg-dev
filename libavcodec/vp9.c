@@ -1118,32 +1118,7 @@ static void free_buffers(VP9Context *s)
     }
 }
 
-static av_cold int vp9_decode_free(AVCodecContext *avctx)
-{
-    VP9Context *s = avctx->priv_data;
-    int i;
-
-    for (i = 0; i < 3; i++) {
-        if (s->s.frames[i].tf.f->buf[0])
-            vp9_frame_unref(avctx, &s->s.frames[i]);
-        av_frame_free(&s->s.frames[i].tf.f);
-    }
-    for (i = 0; i < 8; i++) {
-        if (s->s.refs[i].f->buf[0])
-            ff_thread_release_buffer(avctx, &s->s.refs[i]);
-        av_frame_free(&s->s.refs[i].f);
-        if (s->next_refs[i].f->buf[0])
-            ff_thread_release_buffer(avctx, &s->next_refs[i]);
-        av_frame_free(&s->next_refs[i].f);
-    }
-
-    free_buffers(s);
-    vp9_free_entries(s);
-    av_freep(&s->td);
-    return 0;
-}
-
-void vp9_free_entries((VP9Context *s) {
+void vp9_free_entries(VP9Context *s) {
     pthread_mutex_destroy(&s->progress_mutex);
     pthread_cond_destroy(&s->progress_cond);
     av_freep(&s->entries);
@@ -1185,6 +1160,31 @@ void vp9_await_tile_progress(VP9Context *s, int field, int n) {
     while (atomic_load_explicit(&s->entries[field], memory_order_relaxed) != n)
         pthread_cond_wait(&s->progress_cond, &s->progress_mutex);
     pthread_mutex_unlock(&s->progress_mutex);
+}
+
+static av_cold int vp9_decode_free(AVCodecContext *avctx)
+{
+    VP9Context *s = avctx->priv_data;
+    int i;
+
+    for (i = 0; i < 3; i++) {
+        if (s->s.frames[i].tf.f->buf[0])
+            vp9_frame_unref(avctx, &s->s.frames[i]);
+        av_frame_free(&s->s.frames[i].tf.f);
+    }
+    for (i = 0; i < 8; i++) {
+        if (s->s.refs[i].f->buf[0])
+            ff_thread_release_buffer(avctx, &s->s.refs[i]);
+        av_frame_free(&s->s.refs[i].f);
+        if (s->next_refs[i].f->buf[0])
+            ff_thread_release_buffer(avctx, &s->next_refs[i]);
+        av_frame_free(&s->next_refs[i].f);
+    }
+
+    free_buffers(s);
+    vp9_free_entries(s);
+    av_freep(&s->td);
+    return 0;
 }
 
 static int decode_tiles(AVCodecContext *avctx)
