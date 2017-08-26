@@ -605,19 +605,17 @@ static int decode_frame_header(AVCodecContext *avctx,
     // the old cache values since they are still valid
     if (s->s.h.filter.sharpness != sharp) {
         for (i = 1; i <= 63; i++) {
-            if (!s->filter_lut.lim_lut[i]) {
-                int sharp = s->s.h.filter.sharpness;
-                int limit = i;
+            int sharp = s->s.h.filter.sharpness;
+            int limit = i;
 
-                if (sharp > 0) {
-                    limit >>= (sharp + 3) >> 2;
-                    limit = FFMIN(limit, 9 - sharp);
-                }
-                limit = FFMAX(limit, 1);
-
-                s->filter_lut.lim_lut[i] = limit;
-                s->filter_lut.mblim_lut[i] = 2 * (i + 2) + limit;
+            if (sharp > 0) {
+                limit >>= (sharp + 3) >> 2;
+                limit = FFMIN(limit, 9 - sharp);
             }
+            limit = FFMAX(limit, 1);
+
+            s->filter_lut.lim_lut[i] = limit;
+            s->filter_lut.mblim_lut[i] = 2 * (i + 2) + limit;
         }
     }
     s->s.h.filter.sharpness = sharp;
