@@ -605,7 +605,6 @@ static int decode_frame_header(AVCodecContext *avctx,
     // the old cache values since they are still valid
     if (s->s.h.filter.sharpness != sharp) {
         for (i = 1; i <= 63; i++) {
-            int sharp = s->s.h.filter.sharpness;
             int limit = i;
 
             if (sharp > 0) {
