@@ -804,9 +804,9 @@ static void decode_mode(VP9TileData *td)
 static av_always_inline int
 decode_coeffs_b_generic(VP56RangeCoder *c, int16_t *coef, int n_coeffs,
                         int is_tx32x32, int is8bitsperpixel, int bpp, unsigned (*cnt)[6][3],
-                        unsigned (*eob)[6][2], const uint8_t (*p)[6][11],
+                        unsigned (*eob)[6][2], uint8_t (*p)[6][11],
                         int nnz, const int16_t *scan, const int16_t (*nb)[2],
-                        const int16_t *band_counts, const int16_t *qmul)
+                        const int16_t *band_counts, int16_t *qmul)
 {
     int i = 0, band = 0, band_left = band_counts[band];
     const uint8_t *tp = p[0][nnz];
