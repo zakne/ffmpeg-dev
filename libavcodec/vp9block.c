@@ -923,9 +923,9 @@ skip_eob:
 
 static int decode_coeffs_b_8bpp(VP9TileData *td, int16_t *coef, int n_coeffs,
                                 unsigned (*cnt)[6][3], unsigned (*eob)[6][2],
-                                const uint8_t (*p)[6][11], int nnz, const int16_t *scan,
+                                uint8_t (*p)[6][11], int nnz, const int16_t *scan,
                                 const int16_t (*nb)[2], const int16_t *band_counts,
-                                const int16_t *qmul)
+                                int16_t *qmul)
 {
     return decode_coeffs_b_generic(td->c, coef, n_coeffs, 0, 1, 8, cnt, eob, p,
                                    nnz, scan, nb, band_counts, qmul);
@@ -933,9 +933,9 @@ static int decode_coeffs_b_8bpp(VP9TileData *td, int16_t *coef, int n_coeffs,
 
 static int decode_coeffs_b32_8bpp(VP9TileData *td, int16_t *coef, int n_coeffs,
                                   unsigned (*cnt)[6][3], unsigned (*eob)[6][2],
-                                  const uint8_t (*p)[6][11], int nnz, const int16_t *scan,
+                                  uint8_t (*p)[6][11], int nnz, const int16_t *scan,
                                   const int16_t (*nb)[2], const int16_t *band_counts,
-                                  const int16_t *qmul)
+                                  int16_t *qmul)
 {
     return decode_coeffs_b_generic(td->c, coef, n_coeffs, 1, 1, 8, cnt, eob, p,
                                    nnz, scan, nb, band_counts, qmul);
@@ -943,9 +943,9 @@ static int decode_coeffs_b32_8bpp(VP9TileData *td, int16_t *coef, int n_coeffs,
 
 static int decode_coeffs_b_16bpp(VP9TileData *td, int16_t *coef, int n_coeffs,
                                  unsigned (*cnt)[6][3], unsigned (*eob)[6][2],
-                                 const uint8_t (*p)[6][11], int nnz, const int16_t *scan,
+                                 uint8_t (*p)[6][11], int nnz, const int16_t *scan,
                                  const int16_t (*nb)[2], const int16_t *band_counts,
-                                 const int16_t *qmul)
+                                 int16_t *qmul)
 {
     return decode_coeffs_b_generic(td->c, coef, n_coeffs, 0, 0, td->s->s.h.bpp, cnt, eob, p,
                                    nnz, scan, nb, band_counts, qmul);
@@ -953,9 +953,9 @@ static int decode_coeffs_b_16bpp(VP9TileData *td, int16_t *coef, int n_coeffs,
 
 static int decode_coeffs_b32_16bpp(VP9TileData *td, int16_t *coef, int n_coeffs,
                                    unsigned (*cnt)[6][3], unsigned (*eob)[6][2],
-                                   const uint8_t (*p)[6][11], int nnz, const int16_t *scan,
+                                   uint8_t (*p)[6][11], int nnz, const int16_t *scan,
                                    const int16_t (*nb)[2], const int16_t *band_counts,
-                                   const int16_t *qmul)
+                                   int16_t *qmul)
 {
     return decode_coeffs_b_generic(td->c, coef, n_coeffs, 1, 0, td->s->s.h.bpp, cnt, eob, p,
                                    nnz, scan, nb, band_counts, qmul);
@@ -966,14 +966,14 @@ static av_always_inline int decode_coeffs(VP9TileData *td, int is8bitsperpixel)
     VP9Context *s = td->s;
     VP9Block *b = td->b;
     int row = td->row, col = td->col;
-    const uint8_t (*p)[6][11] = s->prob.coef[b->tx][0 /* y */][!b->intra];
+    uint8_t (*p)[6][11] = s->prob.coef[b->tx][0 /* y */][!b->intra];
     unsigned (*c)[6][3] = td->counts.coef[b->tx][0 /* y */][!b->intra];
     unsigned (*e)[6][2] = td->counts.eob[b->tx][0 /* y */][!b->intra];
     int w4 = ff_vp9_bwh_tab[1][b->bs][0] << 1, h4 = ff_vp9_bwh_tab[1][b->bs][1] << 1;
     int end_x = FFMIN(2 * (s->cols - col), w4);
     int end_y = FFMIN(2 * (s->rows - row), h4);
     int n, pl, x, y, ret;
-    const int16_t (*qmul)[2] = s->s.h.segmentation.feat[b->seg_id].qmul;
+    int16_t (*qmul)[2] = s->s.h.segmentation.feat[b->seg_id].qmul;
     int tx = 4 * s->s.h.lossless + b->tx;
     const int16_t * const *yscans = ff_vp9_scans[tx];
     const int16_t (* const *ynbs)[2] = ff_vp9_scans_nb[tx];

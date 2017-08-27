@@ -462,7 +462,7 @@ static av_always_inline void mc_luma_scaled(VP9TileData *td, vp9_scaled_mc_func 
 }
 
 static av_always_inline void mc_chroma_scaled(VP9TileData *td, vp9_scaled_mc_func smc,
-                                              const vp9_mc_func (*mc)[2],
+                                              vp9_mc_func (*mc)[2],
                                               uint8_t *dst_u, uint8_t *dst_v,
                                               ptrdiff_t dst_stride,
                                               const uint8_t *ref_u, ptrdiff_t src_stride_u,
