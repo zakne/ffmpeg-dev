@@ -33,7 +33,6 @@ static void FN(inter_pred)(VP9TileData *td)
         { 0, 0, 1, 1, 1, 2, 2, 2, 3, 3, 3, 4, 4 },
         { 1, 1, 2, 2, 2, 3, 3, 3, 4, 4, 4, 4, 4 },
     };
-    //VP9Context should be const, but throws a warning because of ThreadFrame *tref1.
     VP9Context *s = td->s;
     VP9Block *b = td->b;
     int row = td->row, col = td->col;
