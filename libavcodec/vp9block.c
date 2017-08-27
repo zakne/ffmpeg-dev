@@ -89,7 +89,8 @@ static void decode_mode(VP9TileData *td)
         TX_32X32, TX_32X32, TX_32X32, TX_32X32, TX_16X16, TX_16X16,
         TX_16X16, TX_8X8,   TX_8X8,   TX_8X8,   TX_4X4,   TX_4X4,  TX_4X4
     };
-    const VP9Context *s = td->s;
+    //VP9Context should be const, but throws a warning because of ff_thread_await_progress.
+    VP9Context *s = td->s;
     VP9Block *b = td->b;
     int row = td->row, col = td->col, row7 = td->row7;
     enum TxfmMode max_tx = max_tx_for_bl_bp[b->bs];

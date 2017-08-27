@@ -65,7 +65,8 @@ static void find_ref_mvs(VP9TileData *td,
         [BS_4x4]   = { {  0, -1 }, { -1,  0 }, { -1, -1 }, {  0, -2 },
                        { -2,  0 }, { -1, -2 }, { -2, -1 }, { -2, -2 } },
     };
-    const VP9Context *s = td->s;
+    //VP9Context should be const, but throws a warning because of ff_thread_await_progress.
+    VP9Context *s = td->s;
     VP9Block *b = td->b;
     int row = td->row, col = td->col, row7 = td->row7;
     const int8_t (*p)[2] = mv_ref_blk_off[b->bs];
