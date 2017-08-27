@@ -107,7 +107,7 @@ static int thread_execute(AVCodecContext *avctx, action_func* func, void *arg, i
     c->func = func;
     c->rets = ret;
 
-    avpriv_slicethread_execute(c->thread, job_count, !c->m_func);
+    avpriv_slicethread_execute(c->thread, job_count, !!c->m_func);
 
     return 0;
 }
