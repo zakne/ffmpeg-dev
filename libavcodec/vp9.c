@@ -111,51 +111,6 @@ fail:
     return AVERROR(ENOMEM);
 }
 
-void vp9_free_entries(VP9Context *s) {
-    pthread_mutex_destroy(&s->progress_mutex);
-    pthread_cond_destroy(&s->progress_cond);
-    av_freep(&s->entries);
-}
-
-int vp9_alloc_entries(AVCodecContext *avctx, int n) {
-    VP9Context *s = avctx->priv_data;
-    int i;
-
-    if (avctx->active_thread_type & FF_THREAD_SLICE)  {
-        if (s->entries)
-            av_freep(&s->entries);
-
-        s->entries = av_malloc_array(n, sizeof(atomic_int));
-
-        if (!s->entries) {
-            av_freep(&s->entries);
-            return AVERROR(ENOMEM);
-        }
-
-        for (i  = 0; i < n; i++)
-            atomic_init(&s->entries[i], 0);
-
-        pthread_mutex_init(&s->progress_mutex, NULL);
-        pthread_cond_init(&s->progress_cond, NULL);
-    }
-    return 0;
-}
-
-void vp9_report_tile_progress(VP9Context *s, int field, int n) {
-    atomic_fetch_add_explicit(&s->entries[field], n, memory_order_relaxed);
-    pthread_cond_signal(&s->progress_cond);
-}
-
-void vp9_await_tile_progress(VP9Context *s, int field, int n) {
-    if (atomic_load_explicit(&s->entries[field], memory_order_acquire) >= n)
-        return;
-
-    pthread_mutex_lock(&s->progress_mutex);
-    while (atomic_load_explicit(&s->entries[field], memory_order_relaxed) != n)
-        pthread_cond_wait(&s->progress_cond, &s->progress_mutex);
-    pthread_mutex_unlock(&s->progress_mutex);
-}
-
 static int update_size(AVCodecContext *avctx, int w, int h)
 {
 #define HWACCEL_MAX (CONFIG_VP9_DXVA2_HWACCEL + CONFIG_VP9_D3D11VA_HWACCEL * 2 + CONFIG_VP9_VAAPI_HWACCEL)
@@ -1705,6 +1660,68 @@ static int vp9_decode_update_thread_context(AVCodecContext *dst, const AVCodecCo
            sizeof(s->s.h.segmentation.feat));
 
     return 0;
+}
+
+void vp9_free_entries(VP9Context *s) {
+    pthread_mutex_destroy(&s->progress_mutex);
+    pthread_cond_destroy(&s->progress_cond);
+    av_freep(&s->entries);
+}
+
+int vp9_alloc_entries(AVCodecContext *avctx, int n) {
+    VP9Context *s = avctx->priv_data;
+    int i;
+
+    if (avctx->active_thread_type & FF_THREAD_SLICE)  {
+        if (s->entries)
+            av_freep(&s->entries);
+
+        s->entries = av_malloc_array(n, sizeof(atomic_int));
+
+        if (!s->entries) {
+            av_freep(&s->entries);
+            return AVERROR(ENOMEM);
+        }
+
+        for (i  = 0; i < n; i++)
+            atomic_init(&s->entries[i], 0);
+
+        pthread_mutex_init(&s->progress_mutex, NULL);
+        pthread_cond_init(&s->progress_cond, NULL);
+    }
+    return 0;
+}
+
+void vp9_report_tile_progress(VP9Context *s, int field, int n) {
+    atomic_fetch_add_explicit(&s->entries[field], n, memory_order_relaxed);
+    pthread_cond_signal(&s->progress_cond);
+}
+
+void vp9_await_tile_progress(VP9Context *s, int field, int n) {
+    if (atomic_load_explicit(&s->entries[field], memory_order_acquire) >= n)
+        return;
+
+    pthread_mutex_lock(&s->progress_mutex);
+    while (atomic_load_explicit(&s->entries[field], memory_order_relaxed) != n)
+        pthread_cond_wait(&s->progress_cond, &s->progress_mutex);
+    pthread_mutex_unlock(&s->progress_mutex);
+}
+#else
+void vp9_free_entries(VP9Context *s) 
+{
+}
+
+int vp9_alloc_entries(AVCodecContext *avctx, int n) 
+{
+    return 0;
+}
+
+void vp9_report_tile_progress(VP9Context *s, int field, int n) 
+{
+}
+
+void vp9_await_tile_progress(VP9Context *s, int field, int n) 
+{
 }
 #endif
 
