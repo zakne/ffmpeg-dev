@@ -152,7 +152,7 @@ typedef struct VP9Context {
     uint8_t mvstep[3][2];
 } VP9Context;
 
-typedef struct VP9TileData {
+struct VP9TileData {
     //VP9Context should be const, but because of the threading API(generates
     //a lot of warnings) it's not.
     VP9Context *s;
@@ -215,7 +215,7 @@ typedef struct VP9TileData {
     struct { int x, y; } min_mv, max_mv;
     int16_t *block_base, *block, *uvblock_base[2], *uvblock[2];
     uint8_t *eob_base, *uveob_base[2], *eob, *uveob[2];
-} VP9TileData;
+};
 
 void ff_vp9_fill_mv(VP9TileData *td, VP56mv *mv, int mode, int sb);
 
