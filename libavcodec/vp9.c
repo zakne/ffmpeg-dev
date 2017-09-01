@@ -1135,7 +1135,7 @@ static av_cold int vp9_decode_free(AVCodecContext *avctx)
     }
 
     free_buffers(s);
-    vp9_free_entries(s);
+    ff_vp9_free_entries(s);
     av_freep(&s->td);
     return 0;
 }
@@ -1315,7 +1315,7 @@ int decode_tiles_mt(AVCodecContext *avctx, void *tdata, int jobnr,
                        8 * tile_cols_len * bytesperpixel >> s->ss_h);
             }
 
-            vp9_report_tile_progress(s, row >> 3, 1);
+            ff_vp9_report_tile_progress(s, row >> 3, 1);
         }
     }
     return 0;
@@ -1335,7 +1335,7 @@ int loopfilter_proc(AVCodecContext *avctx)
     ls_uv =f->linesize[1];
 
     for (i = 0; i < s->sb_rows; i++) {
-        vp9_await_tile_progress(s, i, s->s.h.tiling.tile_cols);
+        ff_vp9_await_tile_progress(s, i, s->s.h.tiling.tile_cols);
 
         if (s->s.h.filter.level) {
             yoff = (ls_y * 64)*i;
@@ -1483,7 +1483,7 @@ FF_ENABLE_DEPRECATION_WARNINGS
         ff_thread_finish_setup(avctx);
     }
 
-    vp9_alloc_entries(avctx, s->sb_rows);
+    ff_vp9_alloc_entries(avctx, s->sb_rows);
 
     do {
         for (i = 0; i < s->l; i++) {
@@ -1662,13 +1662,13 @@ static int vp9_decode_update_thread_context(AVCodecContext *dst, const AVCodecCo
     return 0;
 }
 
-void vp9_free_entries(VP9Context *s) {
+void ff_vp9_free_entries(VP9Context *s) {
     pthread_mutex_destroy(&s->progress_mutex);
     pthread_cond_destroy(&s->progress_cond);
     av_freep(&s->entries);
 }
 
-int vp9_alloc_entries(AVCodecContext *avctx, int n) {
+int ff_vp9_alloc_entries(AVCodecContext *avctx, int n) {
     VP9Context *s = avctx->priv_data;
     int i;
 
@@ -1692,12 +1692,12 @@ int vp9_alloc_entries(AVCodecContext *avctx, int n) {
     return 0;
 }
 
-void vp9_report_tile_progress(VP9Context *s, int field, int n) {
+void ff_vp9_report_tile_progress(VP9Context *s, int field, int n) {
     atomic_fetch_add_explicit(&s->entries[field], n, memory_order_relaxed);
     pthread_cond_signal(&s->progress_cond);
 }
 
-void vp9_await_tile_progress(VP9Context *s, int field, int n) {
+void ff_vp9_await_tile_progress(VP9Context *s, int field, int n) {
     if (atomic_load_explicit(&s->entries[field], memory_order_acquire) >= n)
         return;
 
@@ -1707,20 +1707,20 @@ void vp9_await_tile_progress(VP9Context *s, int field, int n) {
     pthread_mutex_unlock(&s->progress_mutex);
 }
 #else
-void vp9_free_entries(VP9Context *s) 
+void ff_vp9_free_entries(VP9Context *s) 
 {
 }
 
-int vp9_alloc_entries(AVCodecContext *avctx, int n) 
+int ff_vp9_alloc_entries(AVCodecContext *avctx, int n) 
 {
     return 0;
 }
 
-void vp9_report_tile_progress(VP9Context *s, int field, int n) 
+void ff_vp9_report_tile_progress(VP9Context *s, int field, int n) 
 {
 }
 
-void vp9_await_tile_progress(VP9Context *s, int field, int n) 
+void ff_vp9_await_tile_progress(VP9Context *s, int field, int n) 
 {
 }
 #endif
