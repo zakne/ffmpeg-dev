@@ -1089,6 +1089,10 @@ typedef struct RcOverride{
  */
 #define AV_CODEC_CAP_AVOID_PROBING       (1 << 17)
 /**
+ * Codec initializes slice-based threading with a main function
+ */
+#define AV_CODEC_SLICE_THREAD_HAS_MF     (1 << 18)
+/**
  * Codec is intra only.
  */
 #define AV_CODEC_CAP_INTRA_ONLY       0x40000000
@@ -3233,7 +3237,7 @@ typedef struct AVCodecContext {
      * - decoding: Set by libavcodec, user can override.
      */
     int (*execute2)(struct AVCodecContext *c, int (*func)(struct AVCodecContext *c2, void *arg, int jobnr, int threadnr), void *arg2, int *ret, int count);
-
+    int (*execute3)(struct AVCodecContext *c, int (*func)(struct AVCodecContext *c2, void *arg, int jobnr, int threadnr), int (*m_func)(struct AVCodecContext *c3), void *arg2, int *ret, int count);
     /**
      * noise vs. sse weight for the nsse comparison function
      * - encoding: Set by user.
@@ -5774,6 +5778,7 @@ const char *avcodec_profile_name(enum AVCodecID codec_id, int profile);
 
 int avcodec_default_execute(AVCodecContext *c, int (*func)(AVCodecContext *c2, void *arg2),void *arg, int *ret, int count, int size);
 int avcodec_default_execute2(AVCodecContext *c, int (*func)(AVCodecContext *c2, void *arg2, int, int),void *arg, int *ret, int count);
+int avcodec_default_execute3(AVCodecContext *c, int (*func)(AVCodecContext *c2, void *arg2, int jobnr, int threadnr), int (*m_func)(struct AVCodecContext *c3), void *arg, int *ret, int count);
 //FIXME func typedef
 
 /**
