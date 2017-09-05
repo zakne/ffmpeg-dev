@@ -36,6 +36,64 @@
 
 #define VP9_SYNCCODE 0x498342
 
+#if HAVE_THREADS
+static void vp9_free_entries(AVCodecContext *avctx) {
+    VP9Context *s = avctx->priv_data;
+
+    if (avctx->active_thread_type & FF_THREAD_SLICE)  {
+        pthread_mutex_destroy(&s->progress_mutex);
+        pthread_cond_destroy(&s->progress_cond);
+        av_freep(&s->entries);
+    }
+}
+
+static int vp9_alloc_entries(AVCodecContext *avctx, int n) {
+    VP9Context *s = avctx->priv_data;
+    int i;
+
+    if (avctx->active_thread_type & FF_THREAD_SLICE)  {
+        if (s->entries)
+            av_freep(&s->entries);
+
+        s->entries = av_malloc_array(n, sizeof(atomic_int));
+
+        if (!s->entries) {
+            av_freep(&s->entries);
+            return AVERROR(ENOMEM);
+        }
+
+        for (i  = 0; i < n; i++)
+            atomic_init(&s->entries[i], 0);
+
+        pthread_mutex_init(&s->progress_mutex, NULL);
+        pthread_cond_init(&s->progress_cond, NULL);
+    }
+    return 0;
+}
+
+static void vp9_report_tile_progress(VP9Context *s, int field, int n) {
+    pthread_mutex_lock(&s->progress_mutex);
+    atomic_fetch_add_explicit(&s->entries[field], n, memory_order_relaxed);
+    pthread_cond_signal(&s->progress_cond);
+    pthread_mutex_unlock(&s->progress_mutex);
+}
+
+static void vp9_await_tile_progress(VP9Context *s, int field, int n) {
+    if (atomic_load_explicit(&s->entries[field], memory_order_acquire) >= n)
+        return;
+
+    pthread_mutex_lock(&s->progress_mutex);
+    while (atomic_load_explicit(&s->entries[field], memory_order_relaxed) != n)
+        pthread_cond_wait(&s->progress_cond, &s->progress_mutex);
+    pthread_mutex_unlock(&s->progress_mutex);
+}
+#else
+static void vp9_free_entries(VP9Context *s) {}
+static int vp9_alloc_entries(AVCodecContext *avctx, int n) { return 0; }
+static void vp9_report_tile_progress(VP9Context *s, int field, int n) {}
+static void vp9_await_tile_progress(VP9Context *s, int field, int n) {}
+#endif
+
 static void vp9_frame_unref(AVCodecContext *avctx, VP9Frame *f)
 {
     ff_thread_release_buffer(avctx, &f->tf);
@@ -201,7 +259,7 @@ static int update_size(AVCodecContext *avctx, int w, int h)
 #undef assign
 
     if (s->td) {
-        for (i = 0; i < s->l; i++) {
+        for (i = 0; i < s->active_tile_cols; i++) {
             av_freep(&s->td[i].b_base);
             av_freep(&s->td[i].block_base);
         }
@@ -244,13 +302,13 @@ static int update_block_buffers(AVCodecContext *avctx)
         td->uveob_base[0] = td->eob_base + 16 * 16 * sbs;
         td->uveob_base[1] = td->uveob_base[0] + chroma_eobs * sbs;
     } else {
-        for (i = 1; i < s->l; i++) {
+        for (i = 1; i < s->active_tile_cols; i++) {
             if (s->td[i].b_base && s->td[i].block_base) {
                 av_free(s->td[i].b_base);
                 av_free(s->td[i].block_base);
             }
         }
-        for (i = 0; i < s->l; i++) {
+        for (i = 0; i < s->active_tile_cols; i++) {
             s->td[i].b_base = av_malloc(sizeof(VP9Block));
             s->td[i].block_base = av_mallocz((64 * 64 + 2 * chroma_blocks) * bytesperpixel * sizeof(int16_t) +
                                        16 * 16 + 2 * chroma_eobs);
@@ -689,8 +747,11 @@ static int decode_frame_header(AVCodecContext *avctx,
     s->s.h.tiling.log2_tile_rows = decode012(&s->gb);
     s->s.h.tiling.tile_rows = 1 << s->s.h.tiling.log2_tile_rows;
     if (s->s.h.tiling.tile_cols != (1 << s->s.h.tiling.log2_tile_cols)) {
+        int n_range_coders;
+        VP56RangeCoder *rc;
+
         if (s->td) {
-            for (i = 0; i < s->l; i++) {
+            for (i = 0; i < s->active_tile_cols; i++) {
                 av_free(s->td[i].b_base);
                 av_free(s->td[i].block_base);
             }
@@ -698,13 +759,25 @@ static int decode_frame_header(AVCodecContext *avctx,
         }
 
         s->s.h.tiling.tile_cols = 1 << s->s.h.tiling.log2_tile_cols;
-        s->l = avctx->active_thread_type == FF_THREAD_SLICE ? s->s.h.tiling.tile_cols : 1;
-        s->td = av_mallocz_array(s->s.h.tiling.tile_cols, sizeof(VP9TileData));
+        vp9_free_entries(avctx);
+        s->active_tile_cols = avctx->active_thread_type == FF_THREAD_SLICE ?
+                              s->s.h.tiling.tile_cols : 1;
+        vp9_alloc_entries(avctx, s->sb_rows);
+        if (avctx->active_thread_type == FF_THREAD_SLICE) {
+            n_range_coders = 4; // max_tile_rows
+        } else {
+            n_range_coders = s->s.h.tiling.tile_cols;
+        }
+        s->td = av_mallocz_array(s->active_tile_cols, sizeof(VP9TileData) +
+                                 n_range_coders * sizeof(VP56RangeCoder));
         if (!s->td)
             return AVERROR(ENOMEM);
-
-        for (i = 0; i < s->s.h.tiling.tile_cols; i++)
+        rc = (VP56RangeCoder *) &s->td[s->active_tile_cols];
+        for (i = 0; i < s->active_tile_cols; i++) {
             s->td[i].s = s;
+            s->td[i].c_b = rc;
+            rc += n_range_coders;
+        }
     }
 
     /* check reference frames */
@@ -771,7 +844,7 @@ static int decode_frame_header(AVCodecContext *avctx,
         return AVERROR_INVALIDDATA;
     }
 
-    for (i = 0; i < s->s.h.tiling.tile_cols; i++) {
+    for (i = 0; i < s->active_tile_cols; i++) {
         if (s->s.h.keyframe || s->s.h.intraonly) {
             memset(s->td[i].counts.coef, 0, sizeof(s->td[0].counts.coef));
             memset(s->td[i].counts.eob,  0, sizeof(s->td[0].counts.eob));
@@ -1109,7 +1182,7 @@ static void free_buffers(VP9Context *s)
     int i;
 
     av_freep(&s->intra_pred_data[0]);
-    for (i = 0; i < s->l; i++) {
+    for (i = 0; i < s->active_tile_cols; i++) {
         av_freep(&s->td[i].b_base);
         av_freep(&s->td[i].block_base);
     }
@@ -1135,16 +1208,17 @@ static av_cold int vp9_decode_free(AVCodecContext *avctx)
     }
 
     free_buffers(s);
-    ff_vp9_free_entries(s);
+    vp9_free_entries(avctx);
     av_freep(&s->td);
     return 0;
 }
 
-static int decode_tiles(AVCodecContext *avctx)
+static int decode_tiles(AVCodecContext *avctx,
+                        const uint8_t *data, int size)
 {
     VP9Context *s = avctx->priv_data;
     VP9TileData *td = &s->td[0];
-    int row, col, tile_row, tile_col;
+    int row, col, tile_row, tile_col, ret;
     int bytesperpixel;
     int tile_row_start, tile_row_end, tile_col_start, tile_col_end;
     AVFrame *f;
@@ -1159,6 +1233,32 @@ static int decode_tiles(AVCodecContext *avctx)
     for (tile_row = 0; tile_row < s->s.h.tiling.tile_rows; tile_row++) {
         set_tile_offset(&tile_row_start, &tile_row_end,
                         tile_row, s->s.h.tiling.log2_tile_rows, s->sb_rows);
+
+        for (tile_col = 0; tile_col < s->s.h.tiling.tile_cols; tile_col++) {
+            int64_t tile_size;
+
+            if (tile_col == s->s.h.tiling.tile_cols - 1 &&
+                tile_row == s->s.h.tiling.tile_rows - 1) {
+                tile_size = size;
+            } else {
+                tile_size = AV_RB32(data);
+                data += 4;
+                size -= 4;
+            }
+            if (tile_size > size) {
+                ff_thread_report_progress(&s->s.frames[CUR_FRAME].tf, INT_MAX, 0);
+                return AVERROR_INVALIDDATA;
+            }
+            ret = ff_vp56_init_range_decoder(&td->c_b[tile_col], data, tile_size);
+            if (ret < 0)
+                return ret;
+            if (vp56_rac_get_prob_branchy(&td->c_b[tile_col], 128)) { // marker bit
+                ff_thread_report_progress(&s->s.frames[CUR_FRAME].tf, INT_MAX, 0);
+                return AVERROR_INVALIDDATA;
+            }
+            data += tile_size;
+            size -= tile_size;
+        }
 
         for (row = tile_row_start; row < tile_row_end;
              row += 8, yoff += ls_y * 64, uvoff += ls_uv * 64 >> s->ss_v) {
@@ -1181,7 +1281,7 @@ static int decode_tiles(AVCodecContext *avctx)
                     memset(td->left_uv_nnz_ctx, 0, 32);
                     memset(td->left_segpred_ctx, 0, 8);
 
-                    td->c = &s->td[tile_col].c_b[tile_row];
+                    td->c = &td->c_b[tile_col];
                 }
 
                 for (col = tile_col_start;
@@ -1315,7 +1415,7 @@ int decode_tiles_mt(AVCodecContext *avctx, void *tdata, int jobnr,
                        8 * tile_cols_len * bytesperpixel >> s->ss_h);
             }
 
-            ff_vp9_report_tile_progress(s, row >> 3, 1);
+            vp9_report_tile_progress(s, row >> 3, 1);
         }
     }
     return 0;
@@ -1335,7 +1435,7 @@ int loopfilter_proc(AVCodecContext *avctx)
     ls_uv =f->linesize[1];
 
     for (i = 0; i < s->sb_rows; i++) {
-        ff_vp9_await_tile_progress(s, i, s->s.h.tiling.tile_cols);
+        vp9_await_tile_progress(s, i, s->s.h.tiling.tile_cols);
 
         if (s->s.h.filter.level) {
             yoff = (ls_y * 64)*i;
@@ -1359,7 +1459,7 @@ static int vp9_decode_frame(AVCodecContext *avctx, void *frame,
     const uint8_t *data = pkt->data;
     int size = pkt->size;
     VP9Context *s = avctx->priv_data;
-    int ret, tile_row, tile_col, i, j, ref;
+    int ret, i, j, ref;
     int retain_segmap_ref = s->s.frames[REF_FRAME_SEGMAP].segmentation_map &&
                             (!s->s.h.segmentation.enabled || !s->s.h.segmentation.update_map);
     AVFrame *f;
@@ -1483,10 +1583,13 @@ FF_ENABLE_DEPRECATION_WARNINGS
         ff_thread_finish_setup(avctx);
     }
 
-    ff_vp9_alloc_entries(avctx, s->sb_rows);
+    if (avctx->active_thread_type & FF_THREAD_SLICE) {
+        for (i = 0; i < s->sb_rows; i++)
+            atomic_store(&s->entries[i], 0);
+    }
 
     do {
-        for (i = 0; i < s->l; i++) {
+        for (i = 0; i < s->active_tile_cols; i++) {
             s->td[i].b = s->td[i].b_base;
             s->td[i].block = s->td[i].block_base;
             s->td[i].uvblock[0] = s->td[i].uvblock_base[0];
@@ -1496,8 +1599,12 @@ FF_ENABLE_DEPRECATION_WARNINGS
             s->td[i].uveob[1] = s->td[i].uveob_base[1];
         }
 
-        for (tile_row = 0; tile_row < s->s.h.tiling.tile_rows; tile_row++) {
-            if (s->pass != 2) {
+        if (avctx->active_thread_type == FF_THREAD_SLICE) {
+            int tile_row, tile_col;
+
+            assert(!pass);
+
+            for (tile_row = 0; tile_row < s->s.h.tiling.tile_rows; tile_row++) {
                 for (tile_col = 0; tile_col < s->s.h.tiling.tile_cols; tile_col++) {
                     int64_t tile_size;
 
@@ -1509,27 +1616,24 @@ FF_ENABLE_DEPRECATION_WARNINGS
                         data += 4;
                         size -= 4;
                     }
-                    if (tile_size > size) {
-                        ff_thread_report_progress(&s->s.frames[CUR_FRAME].tf, INT_MAX, 0);
+                    if (tile_size > size)
                         return AVERROR_INVALIDDATA;
-                    }
                     ret = ff_vp56_init_range_decoder(&s->td[tile_col].c_b[tile_row], data, tile_size);
                     if (ret < 0)
                         return ret;
-                    if (vp56_rac_get_prob_branchy(&s->td[tile_col].c_b[tile_row], 128)) { // marker bit
-                        ff_thread_report_progress(&s->s.frames[CUR_FRAME].tf, INT_MAX, 0);
+                    if (vp56_rac_get_prob_branchy(&s->td[tile_col].c_b[tile_row], 128)) // marker bit
                         return AVERROR_INVALIDDATA;
-                    }
                     data += tile_size;
                     size -= tile_size;
                 }
             }
-        }
 
-        if (avctx->active_thread_type == FF_THREAD_SLICE)
             avctx->execute3(avctx, decode_tiles_mt, loopfilter_proc, s->td, NULL, s->s.h.tiling.tile_cols);
-        else
-            decode_tiles(avctx);
+        } else {
+            ret = decode_tiles(avctx, data, size);
+            if (ret < 0)
+                return ret;
+        }
 
         // Sum all counts fields into td[0].counts for tile threading
         if (avctx->active_thread_type == FF_THREAD_SLICE)
@@ -1660,68 +1764,6 @@ static int vp9_decode_update_thread_context(AVCodecContext *dst, const AVCodecCo
            sizeof(s->s.h.segmentation.feat));
 
     return 0;
-}
-
-void ff_vp9_free_entries(VP9Context *s) {
-    pthread_mutex_destroy(&s->progress_mutex);
-    pthread_cond_destroy(&s->progress_cond);
-    av_freep(&s->entries);
-}
-
-int ff_vp9_alloc_entries(AVCodecContext *avctx, int n) {
-    VP9Context *s = avctx->priv_data;
-    int i;
-
-    if (avctx->active_thread_type & FF_THREAD_SLICE)  {
-        if (s->entries)
-            av_freep(&s->entries);
-
-        s->entries = av_malloc_array(n, sizeof(atomic_int));
-
-        if (!s->entries) {
-            av_freep(&s->entries);
-            return AVERROR(ENOMEM);
-        }
-
-        for (i  = 0; i < n; i++)
-            atomic_init(&s->entries[i], 0);
-
-        pthread_mutex_init(&s->progress_mutex, NULL);
-        pthread_cond_init(&s->progress_cond, NULL);
-    }
-    return 0;
-}
-
-void ff_vp9_report_tile_progress(VP9Context *s, int field, int n) {
-    atomic_fetch_add_explicit(&s->entries[field], n, memory_order_relaxed);
-    pthread_cond_signal(&s->progress_cond);
-}
-
-void ff_vp9_await_tile_progress(VP9Context *s, int field, int n) {
-    if (atomic_load_explicit(&s->entries[field], memory_order_acquire) >= n)
-        return;
-
-    pthread_mutex_lock(&s->progress_mutex);
-    while (atomic_load_explicit(&s->entries[field], memory_order_relaxed) != n)
-        pthread_cond_wait(&s->progress_cond, &s->progress_mutex);
-    pthread_mutex_unlock(&s->progress_mutex);
-}
-#else
-void ff_vp9_free_entries(VP9Context *s) 
-{
-}
-
-int ff_vp9_alloc_entries(AVCodecContext *avctx, int n) 
-{
-    return 0;
-}
-
-void ff_vp9_report_tile_progress(VP9Context *s, int field, int n) 
-{
-}
-
-void ff_vp9_await_tile_progress(VP9Context *s, int field, int n) 
-{
 }
 #endif
 

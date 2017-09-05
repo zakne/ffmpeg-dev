@@ -96,7 +96,7 @@ typedef struct VP9Context {
     VideoDSPContext vdsp;
     GetBitContext gb;
     VP56RangeCoder c;
-    int pass, l;
+    int pass, active_tile_cols;
 
     pthread_mutex_t progress_mutex;
     pthread_cond_t progress_cond;
@@ -156,7 +156,7 @@ struct VP9TileData {
     //VP9Context should be const, but because of the threading API(generates
     //a lot of warnings) it's not.
     VP9Context *s;
-    VP56RangeCoder c_b[4];
+    VP56RangeCoder *c_b;
     VP56RangeCoder *c;
     int row, row7, col, col7;
     uint8_t *dst[3];
@@ -234,10 +234,5 @@ void ff_vp9_intra_recon_16bpp(VP9TileData *td,
                               ptrdiff_t y_off, ptrdiff_t uv_off);
 void ff_vp9_inter_recon_8bpp(VP9TileData *td);
 void ff_vp9_inter_recon_16bpp(VP9TileData *td);
-
-void ff_vp9_free_entries(VP9Context *s);
-int  ff_vp9_alloc_entries(AVCodecContext *avctx, int n);
-void ff_vp9_report_tile_progress(VP9Context *s, int field, int n);
-void ff_vp9_await_tile_progress(VP9Context *s, int field, int n);
 
 #endif /* AVCODEC_VP9DEC_H */
