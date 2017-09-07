@@ -1628,7 +1628,7 @@ FF_ENABLE_DEPRECATION_WARNINGS
                 }
             }
 
-            avctx->execute3(avctx, decode_tiles_mt, loopfilter_proc, s->td, NULL, s->s.h.tiling.tile_cols);
+            ff_slice_thread_execute_with_mainfunc(avctx, decode_tiles_mt, loopfilter_proc, s->td, NULL, s->s.h.tiling.tile_cols);
         } else {
             ret = decode_tiles(avctx, data, size);
             if (ret < 0)
@@ -1776,7 +1776,8 @@ AVCodec ff_vp9_decoder = {
     .init                  = vp9_decode_init,
     .close                 = vp9_decode_free,
     .decode                = vp9_decode_frame,
-    .capabilities          = AV_CODEC_CAP_DR1 | AV_CODEC_CAP_FRAME_THREADS | AV_CODEC_CAP_SLICE_THREADS | AV_CODEC_SLICE_THREAD_HAS_MF,
+    .capabilities          = AV_CODEC_CAP_DR1 | AV_CODEC_CAP_FRAME_THREADS | AV_CODEC_CAP_SLICE_THREADS,
+    .caps_internal         = FF_CODEC_CAP_SLICE_THREAD_HAS_MF,
     .flush                 = vp9_decode_flush,
     .init_thread_copy      = ONLY_IF_THREADS_ENABLED(vp9_decode_init_thread_copy),
     .update_thread_context = ONLY_IF_THREADS_ENABLED(vp9_decode_update_thread_context),
