@@ -87,11 +87,20 @@ static void vp9_await_tile_progress(VP9Context *s, int field, int n) {
         pthread_cond_wait(&s->progress_cond, &s->progress_mutex);
     pthread_mutex_unlock(&s->progress_mutex);
 }
+
+static int thread_execute3(AVCodecContext *avctx, action_func2* func2, main_func* m_func, void *arg, int *ret, int job_count)
+{
+    SliceThreadContext *c = avctx->internal->thread_ctx;
+    c->func2 = func2;
+    c->m_func = m_func;
+    return ff_thread_execute(avctx, NULL, arg, ret, job_count, 0);
+}
 #else
 static void vp9_free_entries(VP9Context *s) {}
 static int vp9_alloc_entries(AVCodecContext *avctx, int n) { return 0; }
 static void vp9_report_tile_progress(VP9Context *s, int field, int n) {}
 static void vp9_await_tile_progress(VP9Context *s, int field, int n) {}
+static int thread_execute3(AVCodecContext *avctx, action_func2* func2, main_func* m_func, void *arg, int *ret, int job_count) { return 0; }
 #endif
 
 static void vp9_frame_unref(AVCodecContext *avctx, VP9Frame *f)
@@ -1628,7 +1637,7 @@ FF_ENABLE_DEPRECATION_WARNINGS
                 }
             }
 
-            avctx->execute3(avctx, decode_tiles_mt, loopfilter_proc, s->td, NULL, s->s.h.tiling.tile_cols);
+            thread_execute3(avctx, decode_tiles_mt, loopfilter_proc, s->td, NULL, s->s.h.tiling.tile_cols);
         } else {
             ret = decode_tiles(avctx, data, size);
             if (ret < 0)
