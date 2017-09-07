@@ -84,7 +84,7 @@ void ff_slice_thread_free(AVCodecContext *avctx)
     av_freep(&avctx->internal->thread_ctx);
 }
 
-static int thread_execute(AVCodecContext *avctx, action_func* func, void *arg, int *ret, int job_count, int job_size)
+int ff_thread_execute(AVCodecContext *avctx, action_func* func, void *arg, int *ret, int job_count, int job_size)
 {
     SliceThreadContext *c = avctx->internal->thread_ctx;
 
@@ -107,7 +107,7 @@ static int thread_execute2(AVCodecContext *avctx, action_func2* func2, void *arg
 {
     SliceThreadContext *c = avctx->internal->thread_ctx;
     c->func2 = func2;
-    return thread_execute(avctx, NULL, arg, ret, job_count, 0);
+    return ff_thread_execute(avctx, NULL, arg, ret, job_count, 0);
 }
 
 int ff_slice_thread_init(AVCodecContext *avctx)
@@ -152,7 +152,7 @@ int ff_slice_thread_init(AVCodecContext *avctx)
     }
     avctx->thread_count = thread_count;
 
-    avctx->execute = thread_execute;
+    avctx->execute = ff_thread_execute;
     avctx->execute2 = thread_execute2;
     return 0;
 }
