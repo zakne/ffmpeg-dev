@@ -16,10 +16,28 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
  */
 
+#include "libavcodec/avcodec.h"
+
 #ifndef AVUTIL_SLICETHREAD_H
 #define AVUTIL_SLICETHREAD_H
 
 typedef struct AVSliceThread AVSliceThread;
+
+typedef struct SliceThreadContext {
+    AVSliceThread *thread;
+    int (*func)(AVCodecContext *c, void *arg);
+    int (*func2)(AVCodecContext *c, void *arg, int jobnr, int threadnr);
+    int (*m_func)(AVCodecContext *c);
+    void *args;
+    int *rets;
+    int job_size;
+
+    int *entries;
+    int entries_count;
+    int thread_count;
+    pthread_cond_t *progress_cond;
+    pthread_mutex_t *progress_mutex;
+} SliceThreadContext;
 
 /**
  * Create slice threading context.
