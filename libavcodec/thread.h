@@ -133,7 +133,7 @@ void ff_thread_release_buffer(AVCodecContext *avctx, ThreadFrame *f);
 int ff_thread_ref_frame(ThreadFrame *dst, ThreadFrame *src);
 
 int ff_thread_init(AVCodecContext *s);
-int ff_thread_execute(AVCodecContext *avctx, int (*func)(AVCodecContext *c, void *arg), void *arg, int *ret, int job_count, int job_size)
+int ff_thread_execute(AVCodecContext *avctx, int (*func)(AVCodecContext *c, void *arg), void *arg, int *ret, int job_count, int job_size);
 void ff_thread_free(AVCodecContext *s);
 
 int ff_alloc_entries(AVCodecContext *avctx, int count);
