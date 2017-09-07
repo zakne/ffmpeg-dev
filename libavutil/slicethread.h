@@ -23,9 +23,9 @@ typedef struct AVSliceThread AVSliceThread;
 
 typedef struct SliceThreadContext {
     AVSliceThread *thread;
-    action_func *func;
-    action_func2 *func2;
-    main_func *m_func;
+    int (*func)(AVCodecContext *c, void *arg);
+    int (*func2)(AVCodecContext *c, void *arg, int jobnr, int threadnr);
+    int (*m_func)(AVCodecContext *c);
     void *args;
     int *rets;
     int job_size;
