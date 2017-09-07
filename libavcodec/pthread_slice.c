@@ -38,11 +38,13 @@
 
 typedef int (action_func)(AVCodecContext *c, void *arg);
 typedef int (action_func2)(AVCodecContext *c, void *arg, int jobnr, int threadnr);
+typedef int (main_func)(AVCodecContext *c);
 
 typedef struct SliceThreadContext {
     AVSliceThread *thread;
     action_func *func;
     action_func2 *func2;
+    main_func *m_func;
     void *args;
     int *rets;
     int job_size;
@@ -53,6 +55,12 @@ typedef struct SliceThreadContext {
     pthread_cond_t *progress_cond;
     pthread_mutex_t *progress_mutex;
 } SliceThreadContext;
+
+static void main_function(void *priv) {
+    AVCodecContext *avctx = priv;
+    SliceThreadContext *c = avctx->internal->thread_ctx;
+    c->m_func(avctx);
+}
 
 static void worker_func(void *priv, int jobnr, int threadnr, int nb_jobs, int nb_threads)
 {
@@ -99,7 +107,7 @@ int ff_thread_execute(AVCodecContext *avctx, action_func* func, void *arg, int *
     c->func = func;
     c->rets = ret;
 
-    avpriv_slicethread_execute(c->thread, job_count, 0);
+    avpriv_slicethread_execute(c->thread, job_count, !!c->m_func);
     return 0;
 }
 
@@ -114,6 +122,7 @@ int ff_slice_thread_init(AVCodecContext *avctx)
 {
     SliceThreadContext *c;
     int thread_count = avctx->thread_count;
+    static void (*main_f)(void *);
 
 #if HAVE_W32THREADS
     w32thread_init();
@@ -142,7 +151,8 @@ int ff_slice_thread_init(AVCodecContext *avctx)
     }
 
     avctx->internal->thread_ctx = c = av_mallocz(sizeof(*c));
-    if (!c || (thread_count = avpriv_slicethread_create(&c->thread, avctx, worker_func, NULL, thread_count)) <= 1) {
+    main_f = avctx->codec->caps_internal & FF_CODEC_CAP_SLICE_THREAD_HAS_MF ? &main_function : NULL;
+    if (!c || (thread_count = avpriv_slicethread_create(&c->thread, avctx, worker_func, main_f, thread_count)) <= 1) {
         if (c)
             avpriv_slicethread_free(&c->thread);
         av_freep(&avctx->internal->thread_ctx);
@@ -150,6 +160,7 @@ int ff_slice_thread_init(AVCodecContext *avctx)
         avctx->active_thread_type = 0;
         return 0;
     }
+    c->m_func = NULL;
     avctx->thread_count = thread_count;
 
     avctx->execute = ff_thread_execute;
