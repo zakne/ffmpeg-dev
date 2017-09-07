@@ -88,7 +88,7 @@ static void vp9_await_tile_progress(VP9Context *s, int field, int n) {
     pthread_mutex_unlock(&s->progress_mutex);
 }
 
-static int thread_execute3(AVCodecContext *avctx, action_func2* func2, main_func* m_func, void *arg, int *ret, int job_count)
+static int thread_execute3(AVCodecContext *avctx, int (*func)(AVCodecContext *c, void *arg), main_func* m_func, void *arg, int *ret, int job_count)
 {
     SliceThreadContext *c = avctx->internal->thread_ctx;
     c->func2 = func2;
@@ -100,7 +100,7 @@ static void vp9_free_entries(VP9Context *s) {}
 static int vp9_alloc_entries(AVCodecContext *avctx, int n) { return 0; }
 static void vp9_report_tile_progress(VP9Context *s, int field, int n) {}
 static void vp9_await_tile_progress(VP9Context *s, int field, int n) {}
-static int thread_execute3(AVCodecContext *avctx, action_func2* func2, main_func* m_func, void *arg, int *ret, int job_count) { return 0; }
+static int thread_execute3(AVCodecContext *avctx, int (*func)(AVCodecContext *c, void *arg), main_func* m_func, void *arg, int *ret, int job_count) { return 0; }
 #endif
 
 static void vp9_frame_unref(AVCodecContext *avctx, VP9Frame *f)
