@@ -33,6 +33,7 @@
 #include "vp9dec.h"
 #include "libavutil/avassert.h"
 #include "libavutil/pixdesc.h"
+#include "libavutil/slicethread.h"
 
 #define VP9_SYNCCODE 0x498342
 
@@ -91,7 +92,7 @@ static void vp9_await_tile_progress(VP9Context *s, int field, int n) {
 static int thread_execute3(AVCodecContext *avctx, int (*func)(AVCodecContext *c, void *arg), int (*m_func)(AVCodecContext *c), void *arg, int *ret, int job_count)
 {
     SliceThreadContext *c = avctx->internal->thread_ctx;
-    c->func2 = func2;
+    c->func2 = func;
     c->m_func = m_func;
     return ff_thread_execute(avctx, NULL, arg, ret, job_count, 0);
 }

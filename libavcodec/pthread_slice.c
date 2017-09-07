@@ -40,22 +40,6 @@ typedef int (action_func)(AVCodecContext *c, void *arg);
 typedef int (action_func2)(AVCodecContext *c, void *arg, int jobnr, int threadnr);
 typedef int (main_func)(AVCodecContext *c);
 
-typedef struct SliceThreadContext {
-    AVSliceThread *thread;
-    action_func *func;
-    action_func2 *func2;
-    main_func *m_func;
-    void *args;
-    int *rets;
-    int job_size;
-
-    int *entries;
-    int entries_count;
-    int thread_count;
-    pthread_cond_t *progress_cond;
-    pthread_mutex_t *progress_mutex;
-} SliceThreadContext;
-
 static void main_function(void *priv) {
     AVCodecContext *avctx = priv;
     SliceThreadContext *c = avctx->internal->thread_ctx;

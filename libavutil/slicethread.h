@@ -21,6 +21,22 @@
 
 typedef struct AVSliceThread AVSliceThread;
 
+typedef struct SliceThreadContext {
+    AVSliceThread *thread;
+    action_func *func;
+    action_func2 *func2;
+    main_func *m_func;
+    void *args;
+    int *rets;
+    int job_size;
+
+    int *entries;
+    int entries_count;
+    int thread_count;
+    pthread_cond_t *progress_cond;
+    pthread_mutex_t *progress_mutex;
+} SliceThreadContext;
+
 /**
  * Create slice threading context.
  * @param pctx slice threading context returned here
