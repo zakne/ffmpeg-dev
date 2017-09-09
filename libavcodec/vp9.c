@@ -1599,7 +1599,7 @@ FF_ENABLE_DEPRECATION_WARNINGS
             s->td[i].uveob[1] = s->td[i].uveob_base[1];
         }
 
-        if (avctx->active_thread_type == FF_THREAD_SLICE) {
+        if (HAVE_THREADS && avctx->active_thread_type == FF_THREAD_SLICE) {
             int tile_row, tile_col;
 
             assert(!pass);
