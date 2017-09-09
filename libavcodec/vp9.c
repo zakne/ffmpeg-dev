@@ -88,7 +88,7 @@ static void vp9_await_tile_progress(VP9Context *s, int field, int n) {
     pthread_mutex_unlock(&s->progress_mutex);
 }
 #else
-static void vp9_free_entries(VP9Context *s) {}
+static void vp9_free_entries(AVCodecContext *avctx) {}
 static int vp9_alloc_entries(AVCodecContext *avctx, int n) { return 0; }
 static void vp9_report_tile_progress(VP9Context *s, int field, int n) {}
 static void vp9_await_tile_progress(VP9Context *s, int field, int n) {}
