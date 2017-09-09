@@ -2132,6 +2132,13 @@ void ff_thread_report_progress2(AVCodecContext *avctx, int field, int thread, in
 {
 }
 
+int ff_slice_thread_execute_with_mainfunc(AVCodecContext *avctx,
+        int (*action_func2)(AVCodecContext *c, void *arg, int jobnr, int threadnr),
+        int (*main_func)(AVCodecContext *c), void *arg, int *ret, int job_count)
+{
+    return 0;
+}
+
 #endif
 
 int avcodec_is_open(AVCodecContext *s)
